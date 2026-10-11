@@ -8,7 +8,7 @@ SECRET_FILE := environment/.env.secrets.$(ENV)
 -include $(ENV_FILE)
 -include $(SECRET_FILE)
 
-.PHONY: provision provision-app provision-node provision-nginx provision-postgres provision-adminer provision-redis provision-composer ci ci-install ci-composer ci-npm ci-npm-audit ci-migrate own dump-autoload test up upd down restart
+.PHONY: provision provision-app provision-node provision-nginx provision-postgres provision-adminer provision-redis provision-composer ci ci-install ci-composer ci-npm ci-npm-audit ci-migrate own dump-autoload test test-coverage test-coverage-unit test-coverage-feature up upd down restart
 
 # 1. Provision: create Images
 provision-app:
@@ -124,6 +124,15 @@ dump-autoload:
 
 test:
 	docker compose --env-file $(ENV_FILE) --env-file $(SECRET_FILE) -f environment/docker-compose.$(ENV).yaml exec -T app sh -lc "php artisan config:clear --ansi && php artisan test"
+
+test-coverage:
+	docker compose --env-file $(ENV_FILE) --env-file $(SECRET_FILE) -f environment/docker-compose.$(ENV).yaml exec -T app sh -lc "php artisan config:clear --ansi && XDEBUG_MODE=coverage php artisan test --coverage-html storage/coverage"
+
+test-coverage-unit:
+	docker compose --env-file $(ENV_FILE) --env-file $(SECRET_FILE) -f environment/docker-compose.$(ENV).yaml exec -T app sh -lc "php artisan config:clear --ansi && XDEBUG_MODE=coverage php artisan test --testsuite Unit --coverage-html storage/coverage-unit"
+
+test-coverage-feature:
+	docker compose --env-file $(ENV_FILE) --env-file $(SECRET_FILE) -f environment/docker-compose.$(ENV).yaml exec -T app sh -lc "php artisan config:clear --ansi && XDEBUG_MODE=coverage php artisan test --testsuite Feature --coverage-html storage/coverage-feature"
 
 # 3. Dev environment
 up:
