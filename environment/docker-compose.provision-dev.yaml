@@ -1,0 +1,69 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+      target: php-dev
+      args:
+        APP_DOCKER_IMAGE: ${APP_DOCKER_IMAGE}
+    image: ${APP_IMAGE}
+    env_file:
+      - .env
+
+  node:
+    build:
+      context: .
+      dockerfile: node/Dockerfile
+      args:
+        NODE_DOCKER_IMAGE: ${NODE_DOCKER_IMAGE}
+    image: ${NODE_IMAGE}
+    env_file:
+      - .env
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        NGINX_DOCKER_IMAGE: ${NGINX_DOCKER_IMAGE}
+        ENV: ${ENV}
+        APP_DOMAIN: ${APP_DOMAIN}
+    image: ${NGINX_IMAGE}
+
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres/Dockerfile
+      args:
+        POSTGRES_DOCKER_IMAGE: ${POSTGRES_DOCKER_IMAGE}
+    image: ${POSTGRES_IMAGE}
+    env_file:
+      - .env
+
+  adminer:
+    build:
+      context: .
+      dockerfile: adminer/Dockerfile
+      args:
+        ADMINER_DOCKER_IMAGE: ${ADMINER_DOCKER_IMAGE}
+    image: ${ADMINER_IMAGE}
+    env_file:
+      - .env
+
+  redis:
+    build:
+      context: .
+      dockerfile: redis/Dockerfile
+      args:
+        REDIS_DOCKER_IMAGE: ${REDIS_DOCKER_IMAGE}
+    image: ${REDIS_IMAGE}
+    env_file:
+      - .env
+
+  composer:
+    build:
+      context: .
+      dockerfile: composer/Dockerfile
+      args:
+        COMPOSER_DOCKER_IMAGE: ${COMPOSER_DOCKER_IMAGE}
+    image: ${COMPOSER_IMAGE}

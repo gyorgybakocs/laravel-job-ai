@@ -1,0 +1,199 @@
+# Implementation Plan
+
+The work is divided into environment setup and eleven incremental implementation steps. Each step should deliver a working, verifiable outcome and provide the foundation for the next step.
+
+## Shared acceptance criteria
+
+- Build on the official Laravel Vue starter kit and use TypeScript on the frontend.
+- Use existing UI components and organize related application UI elements into application components.
+- Obtain user-facing text from translations, URLs from named routes, and environment-specific settings from configuration.
+- Add or update behavior tests within the relevant step. Use data providers for variations of the same behavior and fake GitHub responses.
+- Verify database-dependent behavior against PostgreSQL. Run TypeScript checks and an asset build when changing the frontend.
+
+## 00 — Development environment
+
+**Story:** As a developer, I want a consistently runnable environment so that I can use the project's services and tools reproducibly.
+
+**Goal:** Set up a Docker-based Laravel environment with PHP, Nginx, PostgreSQL, and Redis, and run Composer and Node tasks in containers. Expose build, installation, and startup tasks through the Makefile.
+
+**Why:** Running the project should not depend on the PHP, Node, or database versions installed on a developer's machine. Include the PHP Redis extension in the base image from the start.
+
+**Acceptance criteria:**
+
+- The official Laravel Vue starter kit can be installed, and the application and database are accessible.
+- Image builds, dependency installation, migrations, asset builds, and environment startup can run separately.
+- Versions, ports, and connection settings come from environment configuration; secrets are excluded from the repository.
+
+**Implementation outcome:**
+
+- `make provision`, `make ci`, and `make upd` completed successfully. The official Vue starter kit was installed, the three initial migrations completed, and the Vite production asset build passed.
+- All application containers started; PostgreSQL passed its health check.
+- Compose reported unset PostgreSQL variables during interpolation, and Docker reported missing default image arguments. These warnings did not prevent image builds, migrations, or startup.
+- The initial npm audit reported 42 vulnerabilities (2 low, 8 moderate, 30 high, 2 critical). After applying fixes, 10 remain (4 moderate, 6 high), with no critical vulnerabilities reported. For this development-only environment, these remaining findings are accepted as non-blocking and further remediation is outside this task's scope.
+- Dependency deprecation and outdated Browserslist data warnings were also reported. Automated tests and a separate TypeScript check were not part of the supplied execution log.
+
+## 01 — Frontend foundation and navigation
+
+**Story:** As a user, I want a simple home page and clear navigation so that I can access the application's features.
+
+**Goal:** Remove the starter kit's demonstration content and establish application navigation.
+
+**Why:** The interface should support the features being built. Keep navigation in a dedicated application component and use UI kit components for its presentation.
+
+**Acceptance criteria:**
+
+- The home page displays application-specific content.
+- Navigation is encapsulated in a reusable component that manages menu items and active states and is used by the application layout.
+- Navigation for login, registration, and the profile continues to work.
+
+## 02 — GitHub profile settings
+
+**Story:** As an authenticated user, I want to provide my GitHub details so that the application can make requests using my token.
+
+**Goal:** Add a GitHub menu item and settings page to the profile navigation, with persistence for the GitHub username and token.
+
+**Why:** GitHub credentials can differ between users and must be stored securely for later requests.
+
+**Acceptance criteria:**
+
+- The GitHub menu item is accessible from the profile settings navigation.
+- Users can modify only their own GitHub settings.
+- The token is encrypted in the database and excluded from user data sent to the frontend.
+
+## 03 — GitHub client and initial request
+
+**Story:** As a user, I want to check a GitHub username or organization so that I can determine whether its public repositories can be retrieved.
+
+**Goal:** Introduce a dedicated GitHub client and call it from the application, without storing targets or repositories locally at this stage.
+
+**Why:** Verify communication with the external system and its failure cases before building database persistence around it.
+
+**Acceptance criteria:**
+
+- The client calls the appropriate GitHub endpoint for the target type and handles repository pagination.
+- Requests work with or without a token; a token is cleared after use and cannot carry over to another user's request.
+- Missing targets, invalid tokens, access restrictions or rate limits, and connection or server failures produce appropriate, safe feedback.
+
+## 04 — Target and repository data model
+
+**Story:** As a user, I want targets and repositories stored locally so that I can browse them from the application's database.
+
+**Goal:** Establish tables, models, and relationships for targets, repositories, and user subscriptions to targets.
+
+**Why:** Multiple users may follow the same target. Store shared GitHub data once and represent each user's subscription separately.
+
+**Acceptance criteria:**
+
+- Migrations create the data model and required foreign keys.
+- Unique constraints prevent duplicate targets, user subscriptions, and external repository IDs.
+- The model stores the data needed for repository presentation and target synchronization information.
+
+## 05 — Add a target and persist its repositories
+
+**Story:** As a user, I want to add a GitHub target so that its public repositories become available in the application.
+
+**Goal:** Connect the Add action to GitHub retrieval and persistence of the target, repositories, and user subscription. At this stage, the workflow runs synchronously within the HTTP request.
+
+**Why:** Make the complete retrieval and persistence workflow operational before introducing the queue.
+
+**Acceptance criteria:**
+
+- A valid target and successful GitHub request result in locally stored target and repository data, with the target linked to the requesting user.
+- A failed addition leaves no partially persisted data.
+- Repeated additions or subscriptions by another user do not duplicate shared data.
+
+## 06 — Target interface and manual synchronization
+
+**Story:** As a user, I want to view my targets and their repositories and manually refresh their data.
+
+**Goal:** Provide a target list, an Add interface, repository presentation, Sync now, and subscription removal. Synchronization still runs within the request.
+
+**Why:** Make retrieval and storage capabilities accessible through a usable interface.
+
+**Acceptance criteria:**
+
+- User and organization targets appear in separate, paginated lists.
+- Repositories, synchronization status, and the last successful synchronization time are visible.
+- Sync now updates stored repositories; removing a target removes only the requesting user's subscription.
+- Users cannot perform target actions without the required subscription.
+
+## 07 — User-scoped repositories and filters
+
+**Story:** As a user, I want to search, filter, and sort repositories belonging to my followed targets so that I can find relevant repositories.
+
+**Goal:** Provide a user-scoped, paginated repository list with search, language and archived-status filters, and sorting options.
+
+**Why:** A plain list becomes difficult to navigate as the number of targets and repositories grows.
+
+**Acceptance criteria:**
+
+- The list and filter data come exclusively from targets followed by the requesting user.
+- Search, filtering, and sorting happen in the database query before pagination.
+- Filters can be combined and reset, and remain applied when changing pages.
+
+## 08 — Synchronization operation data model
+
+**Story:** As a user, I want to see the result of my synchronization request so that another user's failure is not presented as my own.
+
+**Goal:** Create an operation table and model recording the initiating user, target name and type, optional target relationship, status, error, and timestamps.
+
+**Why:** A target is shared data, while a request and its outcome belong to a specific user's operation. An operation for adding a target must also exist before the target itself is created.
+
+**Acceptance criteria:**
+
+- Queued, running, successful, and failed operations can be stored.
+- Each operation belongs to a user and can exist without a target relationship.
+- The migration and data model are tested; Add and Sync now retain their existing behavior at this stage.
+
+## 09 — Working queue and background synchronization
+
+**Story:** As a user, I want manual synchronization to run in the background so that submitting a refresh does not keep the web request waiting for GitHub.
+
+**Goal:** Configure Laravel's Redis queue, start a supervised worker alongside PHP-FPM in the application container, and have Sync now dispatch a job that performs the actual repository synchronization.
+
+**Why:** Verify background processing through the application's synchronization workflow. Establish working retrieval and persistence through the queue before adding operation tracking and automatic frontend updates.
+
+**Acceptance criteria:**
+
+- The worker starts with the application and restarts after exiting. PCNTL support, shutdown time limits, and worker restart procedures are available.
+- Sync now checks the user's subscription and dispatches the synchronization job; the HTTP request does not call GitHub.
+- The job receives target and user identifiers and reads the user's current token when it executes.
+- If the user or target no longer exists, or the subscription has been removed, the job does not call GitHub.
+- Successful execution creates or updates repositories without duplicates and records the last successful synchronization time, including the time of day in the interface.
+- Failed execution preserves existing repositories and the last successful synchronization time, records the failure, and propagates it to the queue worker.
+- Job behavior is tested with faked GitHub responses, and execution through the real Redis queue is verified.
+- Add remains synchronous. Automatic frontend refresh and user-specific operation feedback are introduced in the next step; the user refreshes the page to see completed background changes at this stage.
+
+## 10 — Track synchronization operations and display their outcomes
+
+**Story:** As a user, I want to refresh an existing target's repositories in the background and see the outcome of my request.
+
+**Goal:** Extend the queued Sync now workflow to record a user-specific operation, associate job execution with it, and display its status and outcome on the frontend.
+
+**Why:** Background synchronization is already working. Users now need feedback about their own requests without manually refreshing the page or seeing another user's errors.
+
+**Acceptance criteria:**
+
+- The HTTP request returns after recording the operation and dispatching the job; it does not call GitHub.
+- The job receives stable identifiers and reads the initiating user's current token at execution time.
+- Repeating the same user's active Sync now request does not dispatch another job; jobs for the same target do not overlap.
+- Failed synchronization preserves existing repositories and the last successful synchronization time; the error is recorded on the user's operation.
+- The frontend polls only while operations are active, refreshes the list after success, and does not expose another user's operation errors.
+- Add still follows the previous synchronous workflow at this stage.
+
+## 11 — Move Add to the queue
+
+**Story:** As a user, I want to add a target in the background and see the request's status or error before the target exists.
+
+**Goal:** Have Add record an operation without a target relationship and dispatch the existing synchronization job. The worker retrieves data from GitHub and, on success, persists the target and links it to the user.
+
+**Why:** The worker should perform external retrieval for additions as well. A failed GitHub request should not create a target, while the user should still receive feedback.
+
+**Acceptance criteria:**
+
+- The Add HTTP request only records an operation and dispatches a job; it neither calls GitHub nor creates a target.
+- The worker retrieves data first, then persists the target, repositories, and user subscription in one transaction.
+- Successful operations are linked to the persisted target. Failed operations receive a safe, user-specific error without partial persistence.
+- Repeated execution and shared targets do not produce duplicate targets, subscriptions, or repositories; Add and Sync now jobs for the same target use the same lock.
+- The frontend displays the user's request before the target exists and automatically refreshes the target list after success.
+- Successful and failed execution of the complete Add workflow is verified through a real Redis queue.

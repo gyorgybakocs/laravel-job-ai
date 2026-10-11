@@ -1,0 +1,63 @@
+services:
+  ci-worker:
+    container_name: ci-worker
+    image: ${APP_IMAGE}
+    volumes:
+      - ../app:/app
+      - .env.${ENV}:/.env
+      - .env.secrets.${ENV}:/.env.secrets
+      - ./ci-scripts:/usr/local/bin/ci-scripts
+    working_dir: /app
+    command: sh -c "/usr/local/bin/ci-scripts/$$CI_SCRIPT.sh"
+    environment:
+      - ENV=${ENV:-dev}
+      - CI_SCRIPT=${CI_SCRIPT:-migrate}
+    depends_on:
+      app-postgresql:
+        condition: service_healthy
+
+  composer:
+    container_name: ${COMPOSER_CONTAINER}
+    image: ${COMPOSER_IMAGE}
+    volumes:
+      - ../app:/app
+      - .env.${ENV}:/.env
+      - .env.secrets.${ENV}:/.env.secrets
+      - ./ci-scripts:/usr/local/bin/ci-scripts
+    working_dir: /app
+    command: sh -c "/usr/local/bin/ci-scripts/$$CI_SCRIPT.sh"
+    environment:
+      - ENV=${ENV:-dev}
+      - CI_SCRIPT=${CI_SCRIPT:-composer}
+      - LARAVEL_VERSION=${LARAVEL_VERSION}
+
+  node:
+    container_name: ${NODE_CONTAINER}
+    image: ${NODE_IMAGE}
+    volumes:
+      - ../app:/app
+      - ./ci-scripts:/usr/local/bin/ci-scripts
+    working_dir: /app
+    command: sh -c "/usr/local/bin/ci-scripts/$$CI_SCRIPT.sh"
+    environment:
+      - ENV=${ENV:-dev}
+      - CI_SCRIPT=${CI_SCRIPT:-npm}
+
+  app-postgresql:
+    image: ${POSTGRES_IMAGE}
+    container_name: ${POSTGRES_CONTAINER}
+    env_file:
+      - .env.${ENV}
+      - .env.secrets.${ENV}
+    volumes:
+      - db-vol:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-vol:
+    name: ${APP_NAME}-db-data
+    driver: local

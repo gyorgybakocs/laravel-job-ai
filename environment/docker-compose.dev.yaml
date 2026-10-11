@@ -1,0 +1,60 @@
+services:
+
+  app:
+    image: ${APP_IMAGE}
+    container_name: ${APP_CONTAINER}
+    volumes:
+      - ../app:/app
+    depends_on:
+      app-postgresql:
+        condition: service_healthy
+
+  nginx:
+    image: ${NGINX_IMAGE}
+    container_name: ${NGINX_CONTAINER}
+    ports:
+      - "80:80"
+    volumes:
+      - ../app:/app
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - app
+
+  app-postgresql:
+    image: ${POSTGRES_IMAGE}
+    container_name: ${POSTGRES_CONTAINER}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    env_file:
+      - .env.${ENV}
+      - .env.secrets.${ENV}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  adminer:
+    image: ${ADMINER_IMAGE}
+    container_name: ${ADMINER_CONTAINER}
+    restart: unless-stopped
+    depends_on:
+      - app-postgresql
+    ports:
+      - "${ADMINER_PORT}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: app-postgresql
+
+  redis:
+    image: ${REDIS_IMAGE}
+    container_name: ${REDIS_CONTAINER}
+
+volumes:
+  db-data:
+    name: ${APP_NAME}-db-data
+    driver: local
+  nginx-logs:
+    name: ${APP_NAME}-nginx-logs
+    driver: local
