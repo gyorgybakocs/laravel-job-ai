@@ -27,20 +27,8 @@ class AddGithubTargetForUser
                 $this->targets->attachToUser($user, $target);
                 $this->synchronizer->sync($target, $user->github_token);
             });
-        } catch (ConnectionException) {
-            return AddGithubTargetResult::failed($name, 'targets.request_failed');
-        } catch (RequestException $exception) {
-            if ($exception->response->status() === 404) {
-                return AddGithubTargetResult::notFound($name);
-            }
-
-            $translationKey = match ($exception->response->status()) {
-                401 => 'targets.invalid_token',
-                403, 429 => 'targets.access_restricted',
-                default => 'targets.request_failed',
-            };
-
-            return AddGithubTargetResult::failed($name, $translationKey);
+        } catch (ConnectionException|RequestException $exception) {
+            return AddGithubTargetResult::fromException($name, $exception);
         }
 
         return AddGithubTargetResult::saved($name);

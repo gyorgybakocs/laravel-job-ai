@@ -36,6 +36,7 @@ return [
     ],
 
     'github' => [
+        'targets_per_page' => (int) env('GITHUB_TARGETS_PER_PAGE', 5),
         'base_url' => env('GITHUB_API_BASE_URL', 'https://api.github.com'),
         'per_page' => (int) env('GITHUB_API_PER_PAGE', 100),
         'timeout' => (int) env('GITHUB_API_TIMEOUT', 10),

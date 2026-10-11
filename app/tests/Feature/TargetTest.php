@@ -125,11 +125,11 @@ class TargetTest extends TestCase
         $this->assertNull($target->last_error);
 
         $this->actingAs($user)->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
-            ->component('targets/Index')->has('targets', 1)
-            ->where('targets.0.name', 'octocat')
-            ->where('targets.0.type', $type)
-            ->where('targets.0.sync_status', 'synced')
-            ->where('targets.0.repositories_count', 1));
+            ->component('targets/Index')->has(($type === 'user' ? 'users' : 'orgs').'.data', 1)
+            ->where(($type === 'user' ? 'users' : 'orgs').'.data.0.name', 'octocat')
+            ->where(($type === 'user' ? 'users' : 'orgs').'.data.0.type', $type)
+            ->where(($type === 'user' ? 'users' : 'orgs').'.data.0.status', 'synced')
+            ->where(($type === 'user' ? 'users' : 'orgs').'.data.0.repositories_count', 1));
     }
 
     public static function storageProvider(): array
@@ -140,5 +140,86 @@ class TargetTest extends TestCase
             'shared user target' => ['user', true],
             'shared organization target' => ['org', true],
         ];
+    }
+
+    #[DataProvider('lookupProvider')]
+    public function test_manual_sync_handles_github_results_and_clears_the_token(?int $status, string $type, string $message): void
+    {
+        $user = User::factory()->create(['github_token' => 'test-token']);
+        $target = \App\Models\GithubTarget::query()->create(['name' => 'octocat', 'type' => $type]);
+        $user->githubTargets()->attach($target);
+        Http::fake(['https://api.github.test/*' => $status === null ? Http::failedConnection() : Http::response([], $status)]);
+        $expected = $status === 200 ? 'sync_success' : $message;
+
+        $this->actingAs($user)->post(route('targets.sync', $target))->assertRedirect(route('targets.index'))
+            ->assertSessionHas('target_result', trans("targets.{$expected}", ['target' => 'octocat']));
+        $target->refresh();
+        $this->assertSame($status === 200 ? \App\Enums\GithubTargetSyncStatus::Synced : \App\Enums\GithubTargetSyncStatus::Failed, $target->sync_status);
+        $this->assertNull(app(\App\Src\Github\GithubClient::class)->getToken());
+        if ($status !== 200) {
+            $this->assertNotNull($target->last_error);
+            $group = $type === 'user' ? 'users' : 'orgs';
+            $this->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
+                ->where("{$group}.data.0.last_error", trans('targets.request_failed')));
+        }
+    }
+
+    #[DataProvider('targetActionProvider')]
+    public function test_target_actions_require_a_subscription_and_removal_keeps_shared_data(string $action, string $access): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $target = \App\Models\GithubTarget::query()->create(['name' => 'octocat', 'type' => 'user']);
+        $other->githubTargets()->attach($target);
+        $target->repositories()->create(['external_id' => 123, 'name' => 'hello-world', 'full_name' => 'octocat/hello-world', 'html_url' => 'https://github.com/octocat/hello-world']);
+        if ($access === 'subscribed') $user->githubTargets()->attach($target);
+        if ($access !== 'guest') $this->actingAs($user);
+        Http::fake(['https://api.github.test/*' => Http::response([], 200)]);
+
+        $response = $action === 'sync' ? $this->post(route('targets.sync', $target)) : $this->delete(route('targets.destroy', $target));
+        if ($access === 'guest') $response->assertRedirect(route('login'));
+        elseif ($access === 'unsubscribed') $response->assertNotFound();
+        else $response->assertRedirect(route('targets.index'));
+        if ($access !== 'subscribed' || $action === 'destroy') Http::assertNothingSent();
+        $this->assertTrue($target->fresh()->users()->whereKey($other)->exists());
+        $this->assertDatabaseCount('github_targets', 1);
+        $this->assertDatabaseCount('github_repositories', 1);
+        if ($access === 'subscribed' && $action === 'destroy') $this->assertFalse($user->githubTargets()->whereKey($target)->exists());
+    }
+
+    public static function targetActionProvider(): array
+    {
+        return [
+            'guest sync' => ['sync', 'guest'], 'guest removal' => ['destroy', 'guest'],
+            'unauthorized sync' => ['sync', 'unsubscribed'], 'unauthorized removal' => ['destroy', 'unsubscribed'],
+            'subscribed sync' => ['sync', 'subscribed'], 'subscribed removal' => ['destroy', 'subscribed'],
+        ];
+    }
+
+    #[DataProvider('pageProvider')]
+    public function test_target_lists_paginate_independently_and_include_repository_data(int $usersPage, int $orgsPage): void
+    {
+        config(['services.github.targets_per_page' => 2]);
+        $user = User::factory()->create();
+        foreach (['user', 'org'] as $type) {
+            for ($i = 1; $i <= 3; $i++) {
+                $target = \App\Models\GithubTarget::query()->create(['name' => "{$type}-{$i}", 'type' => $type]);
+                $user->githubTargets()->attach($target);
+                $target->repositories()->create(['external_id' => $target->id, 'name' => 'repo', 'full_name' => "{$target->name}/repo", 'html_url' => 'https://github.com/example/repo', 'language' => 'PHP', 'stargazers_count' => 42]);
+            }
+        }
+        $this->actingAs($user)->get(route('targets.index', ['users_page' => $usersPage, 'orgs_page' => $orgsPage]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users.current_page', $usersPage)->where('orgs.current_page', $orgsPage)
+                ->where('users.total', 3)->where('orgs.total', 3)
+                ->has('users.data', $usersPage === 1 ? 2 : 1)->has('orgs.data', $orgsPage === 1 ? 2 : 1)
+                ->where('users.data.0.repositories.0.language', 'PHP')
+                ->where('orgs.data.0.repositories.0.stars', 42));
+        Http::assertNothingSent();
+    }
+
+    public static function pageProvider(): array
+    {
+        return ['first pages' => [1, 1], 'user next page' => [2, 1], 'organization next page' => [1, 2], 'both next pages' => [2, 2]];
     }
 }

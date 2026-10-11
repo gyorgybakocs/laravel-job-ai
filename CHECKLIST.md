@@ -22,7 +22,7 @@ Suggested target fields:
 - [x] Target type, if users and organizations are handled differently.
 - [x] Synchronization status.
 - [x] Last successful synchronization time.
-- [ ] Most recent synchronization error, if applicable.
+- [x] Most recent synchronization error, if applicable.
 
 ### 2. GitHub integration boundary
 
@@ -60,12 +60,12 @@ Short comments or notes are sufficient for the following; full implementation is
 
 - [x] View synchronization targets.
 - [x] Add a synchronization target.
-- [ ] Trigger synchronization.
-- [ ] View synchronized repositories.
-- [ ] View each target's synchronization status and most recent error, if one occurred.
+- [x] Trigger synchronization.
+- [x] View synchronized repositories.
+- [x] View each target's synchronization status and most recent error, if one occurred.
 - [ ] Search, filter, or sort repositories in at least two useful ways.
-- [ ] Display a useful subset of repository information, such as name, description, language, star count, open issue count, and external last-updated time.
-- [ ] Provide a simple, clear interface without spending much time on styling.
+- [x] Display a useful subset of repository information, such as name, description, language, star count, open issue count, and external last-updated time.
+- [x] Provide a simple, clear interface without spending much time on styling.
 
 ### 6. Basic automated testing
 
@@ -113,7 +113,7 @@ SQLite is permitted, not required.
 - [ ] REST API: expose target and repository data with consistent responses and appropriate status codes.
 - [x] GitHub API pagination: handle all repository pages and explain how synchronization processes them.
 - [ ] README full-text search: store repository README content and support searching that content.
-- [ ] Simple multitenancy: scope targets and repositories to users so each user sees only their own data.
+- [x] Simple multitenancy: scope targets and repositories to users so each user sees only their own data.
 - [ ] Reconciliation: define or implement how repositories no longer returned by GitHub are treated.
 - [ ] Reliability and tests: improve error handling, logging, retries, overlap protection, or automated coverage.
 

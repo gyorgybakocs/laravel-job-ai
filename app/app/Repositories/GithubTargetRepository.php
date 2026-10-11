@@ -7,6 +7,7 @@ use App\Enums\GithubTargetType;
 use App\Models\GithubTarget;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class GithubTargetRepository
 {
@@ -21,6 +22,25 @@ class GithubTargetRepository
             ->orderByDesc('github_target_user.created_at')
             ->orderByDesc('github_targets.id')
             ->get();
+    }
+
+    public function paginatedForUserByType(
+        User $user,
+        GithubTargetType $type,
+        string $pageName,
+        ?int $perPage = null,
+    ): LengthAwarePaginator {
+        return $user
+            ->githubTargets()
+            ->with(['repositories' => fn ($query) => $query
+                ->orderByDesc('stargazers_count')
+                ->orderBy('name')])
+            ->withCount('repositories')
+            ->where('github_targets.type', $type->value)
+            ->orderByDesc('github_target_user.created_at')
+            ->orderByDesc('github_targets.id')
+            ->paginate($perPage ?? config('services.github.targets_per_page'), ['github_targets.*'], $pageName)
+            ->withQueryString();
     }
 
     public function findOrCreateByTypeAndName(GithubTargetType $type, string $name): GithubTarget
@@ -39,6 +59,16 @@ class GithubTargetRepository
     public function attachToUser(User $user, GithubTarget $target): void
     {
         $user->githubTargets()->syncWithoutDetaching([$target->id]);
+    }
+
+    public function detachFromUser(User $user, GithubTarget $target): void
+    {
+        $user->githubTargets()->detach($target->id);
+    }
+
+    public function belongsToUser(User $user, GithubTarget $target): bool
+    {
+        return $user->githubTargets()->whereKey($target->id)->exists();
     }
 
     public function save(GithubTarget $target): void

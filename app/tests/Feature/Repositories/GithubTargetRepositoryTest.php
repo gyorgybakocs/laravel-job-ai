@@ -71,6 +71,96 @@ class GithubTargetRepositoryTest extends TestCase
         $this->assertSame([$newestTarget->id, $oldestTarget->id], $targets->pluck('id')->all());
     }
 
+    #[DataProvider('targetTypeProvider')]
+    public function test_paginated_for_user_by_type_returns_only_matching_user_targets(GithubTargetType $type): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $otherType = $type === GithubTargetType::User
+            ? GithubTargetType::Organization
+            : GithubTargetType::User;
+
+        $matchingTarget = GithubTarget::query()->create([
+            'name' => 'matching',
+            'type' => $type,
+        ]);
+        $otherTypeTarget = GithubTarget::query()->create([
+            'name' => 'other-type',
+            'type' => $otherType,
+        ]);
+        $otherUserTarget = GithubTarget::query()->create([
+            'name' => 'other-user',
+            'type' => $type,
+        ]);
+
+        $matchingTarget->repositories()->create([
+            'external_id' => 123,
+            'name' => 'hello-world',
+            'full_name' => 'matching/hello-world',
+            'html_url' => 'https://github.com/matching/hello-world',
+        ]);
+
+        $user->githubTargets()->attach([$matchingTarget->id, $otherTypeTarget->id]);
+        $otherUser->githubTargets()->attach($otherUserTarget);
+
+        $paginator = (new GithubTargetRepository())->paginatedForUserByType($user, $type, 'targets_page');
+        $items = $paginator->items();
+
+        $this->assertSame(1, $paginator->total());
+        $this->assertTrue($items[0]->is($matchingTarget));
+        $this->assertTrue($items[0]->relationLoaded('repositories'));
+        $this->assertSame('hello-world', $items[0]->repositories->first()->name);
+    }
+
+    public function test_paginated_for_user_by_type_uses_five_items_by_default(): void
+    {
+        $user = User::factory()->create();
+
+        for ($i = 1; $i <= 6; $i++) {
+            $target = GithubTarget::query()->create([
+                'name' => "target-{$i}",
+                'type' => GithubTargetType::User,
+            ]);
+
+            $user->githubTargets()->attach($target, [
+                'created_at' => now()->addMinutes($i),
+                'updated_at' => now()->addMinutes($i),
+            ]);
+        }
+
+        $paginator = (new GithubTargetRepository())->paginatedForUserByType(
+            $user,
+            GithubTargetType::User,
+            'users_page',
+        );
+
+        $this->assertSame(6, $paginator->total());
+        $this->assertCount(5, $paginator->items());
+        $this->assertSame('target-6', $paginator->items()[0]->name);
+    }
+
+    public function test_belongs_to_user_and_detach_from_user_work_with_target_subscriptions(): void
+    {
+        $user = User::factory()->create();
+        $target = GithubTarget::query()->create([
+            'name' => 'octocat',
+            'type' => GithubTargetType::User,
+        ]);
+
+        $repository = new GithubTargetRepository();
+
+        $this->assertFalse($repository->belongsToUser($user, $target));
+
+        $repository->attachToUser($user, $target);
+
+        $this->assertTrue($repository->belongsToUser($user, $target));
+
+        $repository->detachFromUser($user, $target);
+
+        $this->assertFalse($repository->belongsToUser($user, $target));
+        $this->assertTrue(GithubTarget::query()->whereKey($target)->exists());
+    }
+
     #[DataProvider('targetSaveProvider')]
     public function test_save_persists_target_changes(
         GithubTargetSyncStatus $status,
