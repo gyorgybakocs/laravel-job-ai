@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\GithubTargetType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,7 +23,7 @@ class StoreTargetRequest extends FormRequest
                 'max:39',
                 'regex:/\A(?!-)[A-Za-z0-9-]+(?<!-)\z/',
             ],
-            'type' => ['required', Rule::in(['user', 'org'])],
+            'type' => ['required', Rule::enum(GithubTargetType::class)],
         ];
     }
 }

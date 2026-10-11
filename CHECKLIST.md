@@ -33,7 +33,7 @@ Suggested target fields:
 - [ ] Store a useful subset of repository data locally.
 - [ ] Create new repositories during synchronization.
 - [ ] Update repositories already stored locally.
-- [ ] Prevent duplicates with an appropriate database constraint.
+- [x] Prevent duplicates with an appropriate database constraint.
 - [ ] Add a short note about handling repositories that disappear from GitHub. Full implementation is not required.
 
 Suggested repository fields:
@@ -95,10 +95,10 @@ If no AI was used, the file should state that instead. Be prepared to explain al
 
 ### Database design
 
-- [ ] Use Laravel migrations for the feature's database schema.
-- [ ] Include appropriate foreign keys.
-- [ ] Include appropriate unique constraints.
-- [ ] Add short notes about columns worth indexing and why.
+- [x] Use Laravel migrations for the feature's database schema.
+- [x] Include appropriate foreign keys.
+- [x] Include appropriate unique constraints.
+- [x] Add short notes about columns worth indexing and why.
 
 SQLite is permitted, not required.
 
