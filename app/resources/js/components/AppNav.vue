@@ -20,7 +20,21 @@ const user = computed(() => page.props.auth.user);
 <template>
     <header class="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-950">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-16 items-center justify-end">
+            <div class="flex h-16 items-center justify-between">
+                <NavigationMenu class="flex-none" aria-label="Main navigation">
+                    <NavigationMenuList>
+                        <NavigationMenuItem>
+                            <NavigationMenuLink as-child :active="page.url === '/'" :class="navigationMenuTriggerStyle()">
+                                <Link :href="route('home')">{{ lang.home }}</Link>
+                            </NavigationMenuLink>
+                        </NavigationMenuItem>
+                        <NavigationMenuItem v-if="user">
+                            <NavigationMenuLink as-child :active="page.url.startsWith('/targets')" :class="navigationMenuTriggerStyle()">
+                                <Link :href="route('targets.index')">{{ lang.targets }}</Link>
+                            </NavigationMenuLink>
+                        </NavigationMenuItem>
+                    </NavigationMenuList>
+                </NavigationMenu>
                 <NavigationMenu class="flex-none">
                     <NavigationMenuList class="gap-4">
                         <template v-if="user">
