@@ -18,6 +18,26 @@ export interface NavItem {
 
 export interface UiTranslations {
     targets: {
+        users: string;
+        organizations: string;
+        no_users: string;
+        no_orgs: string;
+        last_synced: string;
+        sync_now: string;
+        no_repositories: string;
+        col_name: string;
+        col_language: string;
+        col_stars: string;
+        col_open_issues: string;
+        col_updated: string;
+        delete_target: string;
+        pagination: string;
+        sync_success: string;
+        status_pending: string;
+        status_syncing: string;
+        status_synced: string;
+        status_failed: string;
+        unknown_value: string;
         target_list: string;
         empty_targets: string;
         target_saved: string;
@@ -77,11 +97,40 @@ export interface User {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
+export interface GithubRepository {
+    id: number;
+    name: string;
+    full_name: string;
+    description: string | null;
+    url: string;
+    language: string | null;
+    stars: number;
+    open_issues: number;
+    archived: boolean;
+    github_updated_at: string | null;
+}
+
 export interface GithubTarget {
     id: number;
     name: string;
     type: 'user' | 'org';
-    sync_status: 'pending' | 'syncing' | 'synced' | 'failed';
+    status: 'pending' | 'syncing' | 'synced' | 'failed';
+    last_synced_at: string | null;
+    last_error: string | null;
     repositories_count: number;
-    created_at: string | null;
+    repositories: GithubRepository[];
+}
+
+export interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+export interface Paginator<T> {
+    data: T[];
+    links: PaginationLink[];
+    total: number;
+    current_page: number;
+    last_page: number;
 }

@@ -11,6 +11,8 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/targets', [TargetController::class, 'index'])->name('targets.index');
     Route::post('/targets', [TargetController::class, 'store'])->name('targets.store');
+    Route::post('/targets/{target}/sync', [TargetController::class, 'sync'])->name('targets.sync');
+    Route::delete('/targets/{target}', [TargetController::class, 'destroy'])->name('targets.destroy');
 });
 
 require __DIR__.'/settings.php';

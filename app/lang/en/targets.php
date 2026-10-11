@@ -1,6 +1,27 @@
 <?php
 
 return [
+    'users'                => 'Users',
+    'organizations'        => 'Organizations',
+    'no_users'             => 'No user targets added yet.',
+    'no_orgs'              => 'No organization targets added yet.',
+    'last_synced'          => 'Last synced',
+    'sync_now'             => 'Sync now',
+    'no_repositories'      => 'No repositories stored yet.',
+    'col_name'             => 'Name',
+    'col_language'         => 'Language',
+    'col_stars'            => 'Stars',
+    'col_open_issues'      => 'Open issues',
+    'col_updated'          => 'Updated',
+    'delete_target' => 'Remove :target',
+    'pagination' => 'Pagination',
+    'sync_success' => ':target synchronized',
+    'status_pending' => 'Pending',
+    'status_syncing' => 'Syncing',
+    'status_synced' => 'Synced',
+    'status_failed' => 'Failed',
+    'unknown_value' => '—',
+
     'target_list' => 'Targets',
     'empty_targets' => 'No targets added yet.',
     'target_saved' => ':target saved and synchronized',
