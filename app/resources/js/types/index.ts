@@ -17,6 +17,16 @@ export interface NavItem {
 }
 
 export interface UiTranslations {
+    github: {
+        menu: string;
+        page_title: string;
+        description: string;
+        username_label: string;
+        token_label: string;
+        token_placeholder: string;
+        saved: string;
+    };
+    common: { cancel: string; add: string; save: string; delete: string };
     index: { title: string; description1: string; description2: string };
     nav: { login: string; register: string; logout: string };
 }
@@ -40,6 +50,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    github_username: string | null;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
