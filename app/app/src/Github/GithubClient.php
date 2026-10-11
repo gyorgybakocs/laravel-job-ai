@@ -9,20 +9,24 @@ use Illuminate\Support\Facades\Http;
 
 class GithubClient
 {
-    private PendingRequest $http;
     private int $perPage;
+    private ?string $token = null;
 
-    public function __construct(?string $token = null)
+    public function __construct()
     {
         $this->perPage = (int) config('services.github.per_page');
+    }
 
-        $this->http = Http::baseUrl(config('services.github.base_url'))
-            ->timeout((int) config('services.github.timeout'))
-            ->acceptJson();
+    public function setToken(?string $token): self
+    {
+        $this->token = $token;
 
-        if ($token) {
-            $this->http = $this->http->withToken($token);
-        }
+        return $this;
+    }
+
+    public function getToken(): ?string
+    {
+        return $this->token;
     }
 
     /**
@@ -40,7 +44,7 @@ class GithubClient
         $page = 1;
 
         do {
-            $response = $this->http->get($endpoint, [
+            $response = $this->http()->get($endpoint, [
                 'per_page' => $this->perPage,
                 'page'     => $page,
             ]);
@@ -53,5 +57,18 @@ class GithubClient
         } while (count($items) === $this->perPage);
 
         return $repositories;
+    }
+
+    private function http(): PendingRequest
+    {
+        $request = Http::baseUrl(config('services.github.base_url'))
+            ->timeout((int) config('services.github.timeout'))
+            ->acceptJson();
+
+        if ($this->token) {
+            return $request->withToken($this->token);
+        }
+
+        return $request;
     }
 }

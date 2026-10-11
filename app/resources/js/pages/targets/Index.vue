@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { SharedData } from '@/types';
+import type { GithubTarget, SharedData } from '@/types';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+
+withDefaults(defineProps<{ targets?: GithubTarget[] }>(), { targets: () => [] });
 
 const page = usePage<SharedData>();
 const lang = computed(() => page.props.lang.targets);
@@ -36,6 +39,17 @@ function submit() {
             <p v-if="targetResult" role="status" class="rounded-md border bg-background px-4 py-3 text-sm">
                 {{ targetResult }}
             </p>
+            <Card class="mt-6">
+                <CardHeader>
+                    <CardTitle>{{ lang.target_list }}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ul v-if="targets.length" class="list-disc space-y-2 pl-5 text-sm">
+                        <li v-for="target in targets" :key="target.id">{{ target.name }}</li>
+                    </ul>
+                    <p v-else class="text-sm text-muted-foreground">{{ lang.empty_targets }}</p>
+                </CardContent>
+            </Card>
         </div>
         <Dialog v-model:open="showModal">
             <DialogContent :aria-describedby="undefined" class="sm:max-w-md">

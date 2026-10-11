@@ -29,7 +29,7 @@ class GithubClientTest extends TestCase
     {
         Http::fake(['https://api.github.test/*' => Http::response([], 200)]);
 
-        $client = new GithubClient($token);
+        $client = (new GithubClient())->setToken($token);
         $client->getRepositories('testuser', 'user');
 
         Http::assertSent(function (Request $request) use ($expectsHeader) {
@@ -44,6 +44,29 @@ class GithubClientTest extends TestCase
         return [
             'with token'    => ['test-token', true],
             'without token' => [null, false],
+        ];
+    }
+
+    #[DataProvider('tokenStateProvider')]
+    public function test_get_token_returns_the_last_set_token(?string $firstToken, ?string $secondToken): void
+    {
+        $client = new GithubClient();
+
+        $this->assertNull($client->getToken());
+        $this->assertSame($client, $client->setToken($firstToken));
+        $this->assertSame($firstToken, $client->getToken());
+
+        $client->setToken($secondToken);
+
+        $this->assertSame($secondToken, $client->getToken());
+    }
+
+    public static function tokenStateProvider(): array
+    {
+        return [
+            'token can be set' => ['test-token', 'next-token'],
+            'token can be cleared' => ['test-token', null],
+            'token can stay empty' => [null, null],
         ];
     }
 

@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'target_list' => 'Targets',
+    'empty_targets' => 'No targets added yet.',
+    'target_saved' => ':target saved and synchronized',
     'add_target'           => 'Add New Target',
     'modal_title'          => 'Add Target',
     'username_label'       => 'Username / Organization',
