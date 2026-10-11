@@ -2,10 +2,12 @@
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-const sidebarNavItems: NavItem[] = [
+const page = usePage<SharedData>();
+const sidebarNavItems = computed<NavItem[]>(() => [
     {
         title: 'Profile',
         href: '/settings/profile',
@@ -18,9 +20,17 @@ const sidebarNavItems: NavItem[] = [
         title: 'Appearance',
         href: '/settings/appearance',
     },
-];
+    {
+        title: page.props.lang.github.menu,
+        href: route('github.edit'),
+    },
+]);
 
-const currentPath = window.location.pathname;
+const currentPath = computed(() => new URL(page.url, window.location.origin).pathname);
+
+function isCurrentPath(href: string): boolean {
+    return currentPath.value === new URL(href, window.location.origin).pathname;
+}
 </script>
 
 <template>
@@ -34,7 +44,7 @@ const currentPath = window.location.pathname;
                         v-for="item in sidebarNavItems"
                         :key="item.href"
                         variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
+                        :class="['w-full justify-start', { 'bg-muted': isCurrentPath(item.href) }]"
                         as-child
                     >
                         <Link :href="item.href">

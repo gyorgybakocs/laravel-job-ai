@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'github_username',
+        'github_token',
     ];
 
     /**
@@ -31,6 +33,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'github_token',
     ];
 
     /**
@@ -43,6 +46,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'github_token' => 'encrypted',
         ];
     }
 }

@@ -69,6 +69,12 @@ The work is divided into environment setup and eleven incremental implementation
 - Users can modify only their own GitHub settings.
 - The token is encrypted in the database and excluded from user data sent to the frontend.
 
+**Implementation outcome:**
+
+- GitHub settings are accessible from the profile navigation. Authenticated users can save their own GitHub username and token, with backend validation and translated feedback.
+- The token is encrypted in the database and excluded from serialized user data and settings page responses. Leaving the token field empty preserves the existing token.
+- Manual verification: the user confirmed that GitHub credentials are successfully saved in the application.
+
 ## 03 — GitHub client and initial request
 
 **Story:** As a user, I want to check a GitHub username or organization so that I can determine whether its public repositories can be retrieved.

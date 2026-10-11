@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
             'lang' => [
                 'index' => trans('index'),
                 'nav' => trans('nav'),
+                'github' => trans('github'),
+                'common' => trans('common'),
             ],
             'auth' => [
                 'user' => $request->user(),
