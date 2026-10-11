@@ -7,21 +7,21 @@ Source: [README.md](README.md). Status reflects the current application, not the
 ## Application foundation
 
 - [x] Start from a fresh Laravel application using the official Laravel Vue starter kit with Inertia.js and Vue.
-- [ ] Synchronize public GitHub repositories into a local database instead of proxying GitHub responses.
+- [x] Synchronize public GitHub repositories into a local database instead of proxying GitHub responses.
 
 ## Baseline
 
 ### 1. Synchronization target
 
-- [ ] Allow a user to add a GitHub username or organization and save it locally with basic validation.
-- [ ] Store enough information to support the synchronization flow.
+- [x] Allow a user to add a GitHub username or organization and save it locally with basic validation.
+- [x] Store enough information to support the synchronization flow.
 
 Suggested target fields:
 
-- [ ] Target name.
-- [ ] Target type, if users and organizations are handled differently.
-- [ ] Synchronization status.
-- [ ] Last successful synchronization time.
+- [x] Target name.
+- [x] Target type, if users and organizations are handled differently.
+- [x] Synchronization status.
+- [x] Last successful synchronization time.
 - [ ] Most recent synchronization error, if applicable.
 
 ### 2. GitHub integration boundary
@@ -30,20 +30,20 @@ Suggested target fields:
 
 ### 3. Local repository storage
 
-- [ ] Store a useful subset of repository data locally.
-- [ ] Create new repositories during synchronization.
-- [ ] Update repositories already stored locally.
+- [x] Store a useful subset of repository data locally.
+- [x] Create new repositories during synchronization.
+- [x] Update repositories already stored locally.
 - [x] Prevent duplicates with an appropriate database constraint.
 - [ ] Add a short note about handling repositories that disappear from GitHub. Full implementation is not required.
 
 Suggested repository fields:
 
-- [ ] External repository ID.
-- [ ] Repository name and full name.
-- [ ] Description and repository URL.
-- [ ] Star count and open issue count.
-- [ ] Archived status.
-- [ ] External last-updated time.
+- [x] External repository ID.
+- [x] Repository name and full name.
+- [x] Description and repository URL.
+- [x] Star count and open issue count.
+- [x] Archived status.
+- [x] External last-updated time.
 
 ### 4. Queued synchronization
 
@@ -58,8 +58,8 @@ Short comments or notes are sufficient for the following; full implementation is
 
 ### 5. Inertia.js and Vue UI
 
-- [ ] View synchronization targets.
-- [ ] Add a synchronization target.
+- [x] View synchronization targets.
+- [x] Add a synchronization target.
 - [ ] Trigger synchronization.
 - [ ] View synchronized repositories.
 - [ ] View each target's synchronization status and most recent error, if one occurred.
@@ -70,9 +70,9 @@ Short comments or notes are sufficient for the following; full implementation is
 ### 6. Basic automated testing
 
 - [x] Include a few completed unit and integration tests for the feature.
-- [ ] Cover creating a synchronization target.
-- [ ] Cover synchronizing repositories with a faked or mocked GitHub response.
-- [ ] Cover preventing or avoiding duplicate repository records.
+- [x] Cover creating a synchronization target.
+- [x] Cover synchronizing repositories with a faked or mocked GitHub response.
+- [x] Cover preventing or avoiding duplicate repository records.
 - [x] Fake or mock external HTTP calls in tests.
 
 Browser E2E tests are not required. Clearly named placeholder test methods for additional scenarios are allowed, not required. The README suggests API failures, pagination, retries, scheduled sync, missing repositories, cache invalidation, and invalid targets as possible scenarios.

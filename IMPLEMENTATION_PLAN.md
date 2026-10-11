@@ -111,6 +111,12 @@ The work is divided into environment setup and eleven incremental implementation
 - Unique constraints prevent duplicate targets, user subscriptions, and external repository IDs.
 - The model stores the data needed for repository presentation and target synchronization information.
 
+**Implementation outcome:**
+
+- Shared targets, repositories, and user subscriptions are represented by migrations and models with relationships, foreign keys, unique constraints, indexes, and field casts. The schema and indexing rationale are documented in the database plan.
+- Verification: the user confirmed that migrations completed and tests passed. Model tests cover shared subscriptions, relationship queries, duplicate subscription prevention, target name/type uniqueness, and enum and repository field casts.
+- This step establishes the schema; connecting GitHub retrieval to persistence is handled in the following step.
+
 ## 05 — Add a target and persist its repositories
 
 **Story:** As a user, I want to add a GitHub target so that its public repositories become available in the application.
@@ -124,6 +130,15 @@ The work is divided into environment setup and eleven incremental implementation
 - A valid target and successful GitHub request result in locally stored target and repository data, with the target linked to the requesting user.
 - A failed addition leaves no partially persisted data.
 - Repeated additions or subscriptions by another user do not duplicate shared data.
+
+**Implementation outcome:**
+
+- Adding a target retrieves its public repositories and persists the shared target, repository data, and requesting user's subscription in a transaction. Failed additions roll back persistence and return safe, translated feedback.
+- Repository records are created or updated by their external GitHub ID. Repeated additions and subscriptions by different users do not duplicate shared targets or repositories.
+- Successful synchronization records the target status and last successful synchronization time. The frontend displays a simple list containing only the requesting user's followed targets.
+- The obsolete client factory and its test were removed; the synchronization service sets the current user's token on the client and clears it after the request.
+- Verification: the user confirmed that the frontend works, targets and repositories are stored in the database, and tests and coverage checks pass. Tests cover successful and failed additions, repository updates, duplicate prevention, and user-scoped target listing, using faked GitHub responses and data providers.
+- Synchronization still runs within the HTTP request. Repository browsing, manual refresh controls, filtering, and queued execution are introduced in subsequent steps.
 
 ## 06 — Target interface and manual synchronization
 

@@ -18,6 +18,9 @@ export interface NavItem {
 
 export interface UiTranslations {
     targets: {
+        target_list: string;
+        empty_targets: string;
+        target_saved: string;
         add_target: string;
         modal_title: string;
         username_label: string;
@@ -73,3 +76,12 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface GithubTarget {
+    id: number;
+    name: string;
+    type: 'user' | 'org';
+    sync_status: 'pending' | 'syncing' | 'synced' | 'failed';
+    repositories_count: number;
+    created_at: string | null;
+}
