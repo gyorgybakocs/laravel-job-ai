@@ -17,6 +17,20 @@ export interface NavItem {
 }
 
 export interface UiTranslations {
+    targets: {
+        add_target: string;
+        modal_title: string;
+        username_label: string;
+        username_placeholder: string;
+        type_label: string;
+        type_user: string;
+        type_org: string;
+        target_found: string;
+        target_not_found: string;
+        invalid_token: string;
+        access_restricted: string;
+        request_failed: string;
+    };
     github: {
         menu: string;
         page_title: string;
@@ -28,12 +42,13 @@ export interface UiTranslations {
     };
     common: { cancel: string; add: string; save: string; delete: string };
     index: { title: string; description1: string; description2: string };
-    nav: { login: string; register: string; logout: string };
+    nav: { login: string; register: string; logout: string; home: string; targets: string };
 }
 
 export interface SharedData {
     [key: string]: unknown;
     lang: UiTranslations;
+    flash: { targetResult: string | null };
     name: string;
     quote: { message: string; author: string };
     auth: Auth;

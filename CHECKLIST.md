@@ -26,7 +26,7 @@ Suggested target fields:
 
 ### 2. GitHub integration boundary
 
-- [ ] Retrieve public repositories through a dedicated integration class, client, or service.
+- [x] Retrieve public repositories through a dedicated integration class, client, or service.
 
 ### 3. Local repository storage
 
@@ -69,11 +69,11 @@ Short comments or notes are sufficient for the following; full implementation is
 
 ### 6. Basic automated testing
 
-- [ ] Include a few completed unit and integration tests for the feature.
+- [x] Include a few completed unit and integration tests for the feature.
 - [ ] Cover creating a synchronization target.
 - [ ] Cover synchronizing repositories with a faked or mocked GitHub response.
 - [ ] Cover preventing or avoiding duplicate repository records.
-- [ ] Fake or mock external HTTP calls in tests.
+- [x] Fake or mock external HTTP calls in tests.
 
 Browser E2E tests are not required. Clearly named placeholder test methods for additional scenarios are allowed, not required. The README suggests API failures, pagination, retries, scheduled sync, missing repositories, cache invalidation, and invalid targets as possible scenarios.
 
@@ -104,14 +104,14 @@ SQLite is permitted, not required.
 
 ### Error handling
 
-- [ ] Handle GitHub failures without showing raw exceptions to the user.
+- [x] Handle GitHub failures without showing raw exceptions to the user.
 - [ ] Leave enough information to identify which synchronization failed and why.
 
 ## Optional extensions — only after the baseline works
 
 - [ ] Scheduled synchronization: synchronize existing targets at a chosen fixed interval and briefly explain the interval.
 - [ ] REST API: expose target and repository data with consistent responses and appropriate status codes.
-- [ ] GitHub API pagination: handle all repository pages and explain how synchronization processes them.
+- [x] GitHub API pagination: handle all repository pages and explain how synchronization processes them.
 - [ ] README full-text search: store repository README content and support searching that content.
 - [ ] Simple multitenancy: scope targets and repositories to users so each user sees only their own data.
 - [ ] Reconciliation: define or implement how repositories no longer returned by GitHub are treated.

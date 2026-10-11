@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'github' => [
+        'base_url' => env('GITHUB_API_BASE_URL', 'https://api.github.com'),
+        'per_page' => (int) env('GITHUB_API_PER_PAGE', 100),
+        'timeout' => (int) env('GITHUB_API_TIMEOUT', 10),
+    ],
+
 ];

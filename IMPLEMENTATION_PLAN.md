@@ -89,6 +89,14 @@ The work is divided into environment setup and eleven incremental implementation
 - Requests work with or without a token; a token is cleared after use and cannot carry over to another user's request.
 - Missing targets, invalid tokens, access restrictions or rate limits, and connection or server failures produce appropriate, safe feedback.
 
+**Implementation outcome:**
+
+- Authenticated users can check a GitHub username or organization through the target form. The request uses a dedicated client with the current user's token, or without authentication when no token is provided. Each lookup receives a separate client instance, preventing credentials from carrying over between users.
+- The client uses the appropriate user or organization endpoint. It retrieves consecutive repository pages until a page contains fewer items than the configured page size and combines the results.
+- Input validation runs before GitHub retrieval. Missing targets, invalid tokens, access restrictions or rate limits, and connection or server failures produce translated feedback without exposing raw exceptions.
+- Verification: the user confirmed that the workflow works and the tests pass. Unit and feature tests use faked HTTP responses and data providers for token, target type, pagination, validation, and failure scenarios.
+- This step verifies GitHub retrieval only; targets and repositories are not yet persisted locally, and synchronization is not queued.
+
 ## 04 — Target and repository data model
 
 **Story:** As a user, I want targets and repositories stored locally so that I can browse them from the application's database.
