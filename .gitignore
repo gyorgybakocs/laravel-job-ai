@@ -1,0 +1,6 @@
+# IDE
+.idea/
+
+# Secrets
+environment/.env.*
+!environment/.env.*.example
