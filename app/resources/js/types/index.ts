@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
-    user: User;
+    user: User | null;
 }
 
 export interface BreadcrumbItem {
@@ -16,7 +16,14 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface UiTranslations {
+    index: { title: string; description1: string; description2: string };
+    nav: { login: string; register: string; logout: string };
+}
+
 export interface SharedData {
+    [key: string]: unknown;
+    lang: UiTranslations;
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
