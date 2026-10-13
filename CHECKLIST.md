@@ -115,7 +115,7 @@ SQLite is permitted, not required.
 - [ ] README full-text search: store repository README content and support searching that content.
 - [x] Simple multitenancy: scope targets and repositories to users so each user sees only their own data.
 - [ ] Reconciliation: define or implement how repositories no longer returned by GitHub are treated.
-- [ ] Reliability and tests: improve error handling, logging, retries, overlap protection, or automated coverage.
+- [x] Reliability and tests: improve error handling, logging, retries, overlap protection, or automated coverage.
 
 The README does not require completing all optional extensions.
 

@@ -201,6 +201,15 @@ The work is divided into environment setup and eleven incremental implementation
 - Each operation belongs to a user and can exist without a target relationship.
 - The migration and data model are tested; Add and Sync now retain their existing behavior at this stage.
 
+**Implementation outcome:**
+
+- Synchronization operations can be stored for a requesting user before a target exists, or linked to an existing shared target. Requested target name and type are retained independently of the target relationship.
+- Operation statuses, errors, and execution timestamps are stored with enum and datetime casts. User and target relationships are available in both directions.
+- Foreign keys delete a user's operations when the user is deleted and clear the target relationship when a target is deleted. Indexes support user history, target lookup, and status queries; repeated attempts can be stored as separate operations.
+- The database plan's operation columns, constraints, indexes, relationships, and casts match the migration and model. Its later workflow changes remain planned work.
+- Verification: all four new files and three modified implementation/design files match the supplied snapshot, with no deletions. The user confirmed that tests pass. Data-provider tests cover targetless operations, both target types, all statuses and timestamps, separate user errors on a shared target, parent deletion, and invalid foreign keys.
+- This step adds storage only. Add and Sync now remain synchronous and do not yet create or execute these operations.
+
 ## 09 — Working queue and background synchronization
 
 **Story:** As a user, I want manual synchronization to run in the background so that submitting a refresh does not keep the web request waiting for GitHub.

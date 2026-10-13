@@ -46,4 +46,9 @@ class GithubTarget extends Model
     {
         return $this->hasMany(GithubRepository::class);
     }
+
+    public function githubSyncOperations(): HasMany
+    {
+        return $this->hasMany(GithubSyncOperation::class);
+    }
 }

@@ -51,6 +51,7 @@ class User extends Authenticatable
             'github_token' => 'encrypted',
         ];
     }
+
     public function githubTargets(): BelongsToMany
     {
         return $this
@@ -62,5 +63,10 @@ class User extends Authenticatable
     public function githubTargetSubscriptions(): HasMany
     {
         return $this->hasMany(UserGithubTarget::class);
+    }
+
+    public function githubSyncOperations(): HasMany
+    {
+        return $this->hasMany(GithubSyncOperation::class);
     }
 }
