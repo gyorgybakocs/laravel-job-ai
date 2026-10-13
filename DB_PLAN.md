@@ -33,7 +33,7 @@ Suggested constraints and indexes:
 Reasoning:
 
 - `type + name` uniquely identifies the GitHub target inside this app.
-- Sync status is global because the public GitHub repository list is global.
+- `sync_status` and `last_error` currently support the synchronous implementation. They will be removed when Add and Sync now both use user-owned operations.
 - `last_synced_at` helps find stale targets for scheduled synchronization later.
 
 ### `github_target_user`
@@ -111,47 +111,51 @@ If User A and User B both follow the same GitHub organization, and User A trigge
 
 This is intentional because public GitHub repository data is not user-specific.
 
-The global sync fields belong on `github_targets`:
+The last successful synchronization time belongs on `github_targets`, because the stored repository data is shared. An individual attempt's status and error belong to its requesting user: a token failure must not become another user's error.
 
-- `sync_status`
-- `last_synced_at`
-- `last_error`
+The current synchronous paths still use `github_targets.sync_status` and `github_targets.last_error`. They remain during this first schema step and will be removed after both Add and Sync now switch to operations. `last_synced_at` remains on the target.
 
-This keeps the baseline implementation simple and avoids duplicate API calls.
+## User-Owned Synchronization Operations
 
-## Future: User-Specific Sync Request Status
+Implemented table: `github_sync_operations`.
 
-If the application later needs to show who requested a sync, whether a specific user's request is still waiting, or a detailed sync history, add a separate sync run table.
+Columns:
 
-Suggested table: `github_target_sync_runs`
-
-Suggested columns:
-
-- `id`
-- `github_target_id`
-- `requested_by_user_id` - nullable for scheduled/system syncs
-- `status` - for example `queued`, `running`, `succeeded`, `failed`
-- `started_at`
-- `finished_at`
-- `error`
+- `id` - operation identifier; the future job and status endpoint use this ID
+- `user_id` - required requesting user; their stored GitHub token is read at execution time, not copied into this table
+- `github_target_id` - nullable, allowing an Add operation before a target exists
+- `target_name` - requested GitHub username or organization name
+- `target_type` - `user` or `org`
+- `status` - `queued` (default), `running`, `succeeded`, or `failed`
+- `error` - nullable, intended for a safe translated error key, not a raw HTTP exception or token
+- `started_at` - nullable until execution begins
+- `finished_at` - nullable until the operation succeeds or fails
 - `created_at`
 - `updated_at`
 
-Suggested constraints and indexes:
+Constraints and indexes:
 
-- Foreign key on `github_target_id`
-- Nullable foreign key on `requested_by_user_id`
-- Index on `github_target_id, created_at`
-- Index on `requested_by_user_id, created_at`
-- Index on `status`
+- Required foreign key on `user_id`, cascading on user deletion: operations belong to that user.
+- Nullable foreign key on `github_target_id`, set to null on target deletion: the attempt retains its requested name/type and result.
+- Index on `user_id, created_at` for a user's operation history.
+- Index on `github_target_id` for target-related attempts and foreign-key lookups.
+- Index on `status` for pending/running operation queries.
+- No unique constraint on target or user/target: repeated attempts must be separate rows. Concurrent-request protection belongs to the later queue implementation.
 
-Reasoning:
+Relationships:
 
-- `github_targets.sync_status` represents the current global state of the shared target.
-- `github_target_sync_runs` represents individual sync attempts and their requester.
-- Scheduled syncs can create rows with `requested_by_user_id = null`.
-- Manual syncs can store the user who requested them.
-- This avoids mixing current target state with historical or user-specific workflow state.
+- `User::githubSyncOperations()` and `GithubTarget::githubSyncOperations()` are one-to-many.
+- `GithubSyncOperation::user()` and `GithubSyncOperation::githubTarget()` are inverse relationships.
+- `target_type` and `status` use enums; execution timestamps use datetime casts.
+
+Planned flow:
+
+- Add saves an operation and dispatches a job after the operation transaction commits. It does not yet create a target or subscription.
+- The job loads the requester and their current token, retrieves GitHub data, then saves the shared target, repositories and user subscription on success. It links the operation to the saved target.
+- A failed Add keeps the operation and its error without creating a new target or subscription.
+- Sync now creates an operation linked to an existing target, after checking the requester's subscription. Failure retains the previously stored repositories.
+- The future status endpoint must restrict reads to the authenticated user's operations. Model relationships alone do not provide HTTP authorization.
+- This step adds storage and relationships only. No controller, job, worker or frontend has been switched yet.
 
 ## Future Alternative: Partial Duplication for User-Specific Repository Membership
 
@@ -182,17 +186,15 @@ Trade-off:
 
 - This avoids duplicating full repository rows for every user.
 - It does not preserve historical repository metadata such as old star counts or old descriptions.
-- If exact historical metadata is required, use full sync snapshots instead, for example `github_target_sync_runs` plus `sync_run_repositories`.
+- If exact historical metadata is required, use full sync snapshots instead, for example a separate snapshot table plus `snapshot_repositories`.
 
 ## Implementation Order
 
-1. Create `github_targets`.
-2. Create `github_target_user`.
-3. Create `github_repositories`.
-4. Add Eloquent models and relationships.
-5. Change the current target endpoint to find or create a shared target and attach it to the authenticated user.
-6. Keep repository synchronization separate from target creation.
-7. Add queued synchronization after the schema and relationships are stable.
+1. Shared targets, subscriptions and repositories: implemented.
+2. User-owned synchronization operation storage and model: implemented; existing synchronous behavior remains.
+3. Introduce the job and running Redis worker, then switch Sync now together with its user-specific status UI.
+4. Switch Add using the same operation tracking; only save target/subscription after successful retrieval.
+5. Remove the legacy target status/error fields after both flows have switched.
 
 ## Trade-Offs
 
