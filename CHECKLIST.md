@@ -63,7 +63,7 @@ Short comments or notes are sufficient for the following; full implementation is
 - [x] Trigger synchronization.
 - [x] View synchronized repositories.
 - [x] View each target's synchronization status and most recent error, if one occurred.
-- [ ] Search, filter, or sort repositories in at least two useful ways.
+- [x] Search, filter, or sort repositories in at least two useful ways.
 - [x] Display a useful subset of repository information, such as name, description, language, star count, open issue count, and external last-updated time.
 - [x] Provide a simple, clear interface without spending much time on styling.
 

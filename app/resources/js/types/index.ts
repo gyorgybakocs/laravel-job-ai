@@ -17,6 +17,38 @@ export interface NavItem {
 }
 
 export interface UiTranslations {
+    repositories: {
+        page_title: string;
+        empty: string;
+        empty_filtered: string;
+        filter_archived: string;
+        filter_active: string;
+        filter_language: string;
+        sort_label: string;
+        search_placeholder: string;
+        search_in: string;
+        search_target: string;
+        search_description: string;
+        sort_target_asc: string;
+        sort_target_desc: string;
+        sort_name_asc: string;
+        sort_name_desc: string;
+        sort_updated_desc: string;
+        sort_stars_desc: string;
+        filter_ok: string;
+        filter_reset: string;
+        no_languages: string;
+        col_name: string;
+        col_target: string;
+        col_description: string;
+        col_language: string;
+        col_stars: string;
+        col_open_issues: string;
+        col_archived: string;
+        col_updated: string;
+        archived_yes: string;
+        archived_no: string;
+    };
     targets: {
         users: string;
         organizations: string;
@@ -65,7 +97,7 @@ export interface UiTranslations {
     };
     common: { cancel: string; add: string; save: string; delete: string };
     index: { title: string; description1: string; description2: string };
-    nav: { login: string; register: string; logout: string; home: string; targets: string };
+    nav: { login: string; register: string; logout: string; repositories: string; home: string; targets: string };
 }
 
 export interface SharedData {
@@ -133,4 +165,26 @@ export interface Paginator<T> {
     total: number;
     current_page: number;
     last_page: number;
+}
+
+export type RepositorySortValue = 'target_asc' | 'target_desc' | 'name_asc' | 'name_desc' | 'updated_desc' | 'stars_desc';
+export type RepositoryStatus = 'archived' | 'active';
+export type RepositorySearchField = 'target' | 'description';
+export interface RepositoryFiltersData {
+    status: RepositoryStatus | null;
+    languages: string[];
+    search: string;
+    search_in: RepositorySearchField;
+}
+export interface RepositoryFilterOptions {
+    statuses: RepositoryStatus[];
+    sorts: RepositorySortValue[];
+    searchFields: RepositorySearchField[];
+}
+export interface LanguageOption {
+    name: string;
+    count: number;
+}
+export interface RepositoryWithTarget extends GithubRepository {
+    target: Pick<GithubTarget, 'id' | 'name' | 'type'>;
 }
