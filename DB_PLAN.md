@@ -113,7 +113,7 @@ This is intentional because public GitHub repository data is not user-specific.
 
 The last successful synchronization time belongs on `github_targets`, because the stored repository data is shared. An individual attempt's status and error belong to its requesting user: a token failure must not become another user's error.
 
-The current synchronous paths still use `github_targets.sync_status` and `github_targets.last_error`. They remain during this first schema step and will be removed after both Add and Sync now switch to operations. `last_synced_at` remains on the target.
+The current Add service and synchronization job still use `github_targets.sync_status` and `github_targets.last_error`. The job integration is being tested with synchronous execution and does not yet write user-owned operation results. The existing target fields remain during this transition; `last_synced_at` records successful updates of the shared repository data.
 
 ## User-Owned Synchronization Operations
 
@@ -121,7 +121,7 @@ Implemented table: `github_sync_operations`.
 
 Columns:
 
-- `id` - operation identifier; the future job and status endpoint use this ID
+- `id` - operation identifier for future operation-aware job execution and user-scoped status reads
 - `user_id` - required requesting user; their stored GitHub token is read at execution time, not copied into this table
 - `github_target_id` - nullable, allowing an Add operation before a target exists
 - `target_name` - requested GitHub username or organization name
@@ -154,8 +154,8 @@ Planned flow:
 - The job loads the requester and their current token, retrieves GitHub data, then saves the shared target, repositories and user subscription on success. It links the operation to the saved target.
 - A failed Add keeps the operation and its error without creating a new target or subscription.
 - Sync now creates an operation linked to an existing target, after checking the requester's subscription. Failure retains the previously stored repositories.
-- The future status endpoint must restrict reads to the authenticated user's operations. Model relationships alone do not provide HTTP authorization.
-- This step adds storage and relationships only. No controller, job, worker or frontend has been switched yet.
+- Future operation status reads must be restricted to the authenticated user's operations. Model relationships alone do not provide HTTP authorization.
+- Operation storage and relationships are implemented. Queue infrastructure and a supervised worker are prepared in the existing app container. Sync now dispatches the actual synchronization job, currently executed immediately using the synchronous driver for integration testing. Add still calls its service directly. Neither flow writes operation records yet; no standalone smoke command or test job is used.
 
 ## Future Alternative: Partial Duplication for User-Specific Repository Membership
 
@@ -191,10 +191,11 @@ Trade-off:
 ## Implementation Order
 
 1. Shared targets, subscriptions and repositories: implemented.
-2. User-owned synchronization operation storage and model: implemented; existing synchronous behavior remains.
-3. Introduce the job and running Redis worker, then switch Sync now together with its user-specific status UI.
-4. Switch Add using the same operation tracking; only save target/subscription after successful retrieval.
-5. Remove the legacy target status/error fields after both flows have switched.
+2. User-owned synchronization operation storage and model: implemented; not yet used by the synchronization workflow.
+3. Queue infrastructure and actual synchronization job integration: implemented; Sync now dispatches the job with synchronous execution for testing. Add still calls its service directly.
+4. Enable Redis-backed Sync now execution and user-specific operation tracking and feedback.
+5. Switch Add using the same operation tracking; only save target/subscription after successful retrieval.
+6. Remove the legacy target status/error fields after both flows have switched.
 
 ## Trade-Offs
 

@@ -7,15 +7,19 @@ RUN apk add --no-cache \
     libzip-dev \
     zip \
     unzip \
-    icu-dev
+    icu-dev \
+    supervisor
 
 RUN docker-php-ext-install pdo_pgsql bcmath gd zip intl
 
 RUN apk add --no-cache --virtual .redis-build-deps $PHPIZE_DEPS \
+    && docker-php-ext-install pcntl \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del .redis-build-deps
-    
+
+COPY php/supervisord.conf /etc/supervisord.conf
+
 # --- DEV Stage ---
 FROM php-base AS php-dev
 
@@ -24,4 +28,3 @@ RUN apk add --no-cache $PHPIZE_DEPS linux-headers \
     && docker-php-ext-enable xdebug
 
 WORKDIR /app
-

@@ -91,7 +91,7 @@ If no AI was used, the file should state that instead. Be prepared to explain al
 
 ### Third-party integration structure
 
-- [ ] Keep controllers, synchronization logic, queue jobs, GitHub API communication, and mapping external data into local models reasonably separated.
+- [x] Keep controllers, synchronization logic, queue jobs, GitHub API communication, and mapping external data into local models reasonably separated.
 
 ### Database design
 

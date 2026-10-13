@@ -160,3 +160,9 @@ This is not a production-ready implementation. For example, there is no PgBounce
 In previous projects, I used Redis as a buffer in ELK pipelines and for caching. Here, I will use it as the backing store for Laravel's queue. The synchronization workflow is simple enough that I do not need RabbitMQ or AWS SQS; Redis provides a fast in-memory store with the data structures Laravel needs to enqueue and process jobs.
 
 Redis being fast does not make the queue production-ready by itself. Persistence, availability, and worker operation would need to be configured for a production deployment. For this task, a local Redis container and Laravel's queue abstraction are sufficient.
+
+### 4. Queue Worker Placement
+
+The queue worker runs as a separate process alongside PHP-FPM in the existing application container. Supervisor starts and supervises both processes. The PHP image includes the Redis extension and PCNTL, and Compose waits for PostgreSQL and Redis health checks before starting the app.
+
+A separate worker instance is unnecessary for this development workload. It would become useful if background processing needed independent scaling, resource limits, or deployment and restart control. Such an instance could reuse the PHP image and application code; no separate worker image is needed.

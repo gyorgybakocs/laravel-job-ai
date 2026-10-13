@@ -210,32 +210,41 @@ The work is divided into environment setup and eleven incremental implementation
 - Verification: all four new files and three modified implementation/design files match the supplied snapshot, with no deletions. The user confirmed that tests pass. Data-provider tests cover targetless operations, both target types, all statuses and timestamps, separate user errors on a shared target, parent deletion, and invalid foreign keys.
 - This step adds storage only. Add and Sync now remain synchronous and do not yet create or execute these operations.
 
-## 09 — Working queue and background synchronization
+## 09 — Queue infrastructure and synchronization job integration test
 
-**Story:** As a user, I want manual synchronization to run in the background so that submitting a refresh does not keep the web request waiting for GitHub.
+**Story:** As a developer, I want to verify the actual synchronization job through the existing manual action before enabling background execution and operation tracking.
 
-**Goal:** Configure Laravel's Redis queue, start a supervised worker alongside PHP-FPM in the application container, and have Sync now dispatch a job that performs the actual repository synchronization.
+**Goal:** Prepare Redis queue configuration and a supervised worker in the application container, then connect Sync now to the actual synchronization job and validate that integration using synchronous execution.
 
-**Why:** Verify background processing through the application's synchronization workflow. Establish working retrieval and persistence through the queue before adding operation tracking and automatic frontend updates.
+**Why:** First verify the job's inputs, authorization checks, GitHub retrieval, persistence, and failure behavior through the existing workflow. Redis-backed background execution and user-specific operation feedback follow in the next step.
 
 **Acceptance criteria:**
 
-- The worker starts with the application and restarts after exiting. PCNTL support, shutdown time limits, and worker restart procedures are available.
-- Sync now checks the user's subscription and dispatches the synchronization job; the HTTP request does not call GitHub.
-- The job receives target and user identifiers and reads the user's current token when it executes.
-- If the user or target no longer exists, or the subscription has been removed, the job does not call GitHub.
+- The PHP image includes Supervisor and PCNTL. The worker runs alongside PHP-FPM in the existing container, with restart and shutdown settings.
+- Redis connection settings are available in the environment templates. Local integration testing can use the synchronous queue driver, which executes the job immediately within the request.
+- Sync now checks the user's subscription and dispatches the synchronization job. Add continues to call the existing addition service directly.
+- The job receives target and user identifiers, reads the user's current token at execution time, and skips inaccessible or deleted records.
 - Successful execution creates or updates repositories without duplicates and records the last successful synchronization time, including the time of day in the interface.
-- Failed execution preserves existing repositories and the last successful synchronization time, records the failure, and propagates it to the queue worker.
-- Job behavior is tested with faked GitHub responses, and execution through the real Redis queue is verified.
-- Add remains synchronous. Automatic frontend refresh and user-specific operation feedback are introduced in the next step; the user refreshes the page to see completed background changes at this stage.
+- Failed execution preserves existing repositories and the last successful synchronization time, records the failure, and propagates the exception.
+- Job and dispatch behavior are tested with faked GitHub responses. Verification uses the actual synchronization job, without a separate smoke command or disposable test job.
+- This step does not claim Redis-backed background execution or operation tracking is complete.
+
+**Implementation outcome:**
+
+- The actual synchronization job is connected to Sync now. The local configuration deliberately uses `QUEUE_CONNECTION=sync` for this integration test, so the job runs immediately rather than being consumed from Redis. Add remains synchronous and does not dispatch a job.
+- The PHP image was rebuilt. PCNTL is available, and Supervisor reports PHP-FPM and the worker process running. This process check does not establish that a Redis-backed job has executed.
+- Environment templates define `QUEUE_CONNECTION=redis` and `REDIS_HOST=redis` for later background execution. The corrected application environment template was verified. Template changes do not automatically replace settings in an existing application environment file.
+- Tests cover current credentials, user and organization targets, repeated execution without duplicate repositories, provider failures, deleted users or targets, and removed subscriptions.
+- Verification passed: 167 tests with 1,408 assertions against PostgreSQL, TypeScript checking, and the Vite production asset build. No files were deleted in this step.
+- Redis-backed execution and user-specific operation tracking remain work for the next step.
 
 ## 10 — Track synchronization operations and display their outcomes
 
 **Story:** As a user, I want to refresh an existing target's repositories in the background and see the outcome of my request.
 
-**Goal:** Extend the queued Sync now workflow to record a user-specific operation, associate job execution with it, and display its status and outcome on the frontend.
+**Goal:** Enable Redis-backed execution for the validated Sync now job, record a user-specific operation, associate job execution with it, and display its status and outcome on the frontend.
 
-**Why:** Background synchronization is already working. Users now need feedback about their own requests without manually refreshing the page or seeing another user's errors.
+**Why:** The job integration has been validated synchronously. Move execution to the worker and provide feedback about each user's request without manual page refreshes or exposure of another user's errors.
 
 **Acceptance criteria:**
 
