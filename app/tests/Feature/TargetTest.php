@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Jobs\SyncGithubTarget;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -142,31 +144,35 @@ class TargetTest extends TestCase
         ];
     }
 
-    #[DataProvider('lookupProvider')]
-    public function test_manual_sync_handles_github_results_and_clears_the_token(?int $status, string $type, string $message): void
+    #[DataProvider('targetTypeProvider')]
+    public function test_manual_sync_queues_the_job_without_calling_github(string $type): void
     {
+        Queue::fake();
         $user = User::factory()->create(['github_token' => 'test-token']);
         $target = \App\Models\GithubTarget::query()->create(['name' => 'octocat', 'type' => $type]);
         $user->githubTargets()->attach($target);
-        Http::fake(['https://api.github.test/*' => $status === null ? Http::failedConnection() : Http::response([], $status)]);
-        $expected = $status === 200 ? 'sync_success' : $message;
 
-        $this->actingAs($user)->post(route('targets.sync', $target))->assertRedirect(route('targets.index'))
-            ->assertSessionHas('target_result', trans("targets.{$expected}", ['target' => 'octocat']));
-        $target->refresh();
-        $this->assertSame($status === 200 ? \App\Enums\GithubTargetSyncStatus::Synced : \App\Enums\GithubTargetSyncStatus::Failed, $target->sync_status);
-        $this->assertNull(app(\App\Src\Github\GithubClient::class)->getToken());
-        if ($status !== 200) {
-            $this->assertNotNull($target->last_error);
-            $group = $type === 'user' ? 'users' : 'orgs';
-            $this->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
-                ->where("{$group}.data.0.last_error", trans('targets.request_failed')));
-        }
+        $this->actingAs($user)->post(route('targets.sync', $target))
+            ->assertRedirect(route('targets.index'))
+            ->assertSessionMissing('target_result');
+
+        Queue::assertPushed(SyncGithubTarget::class, fn (SyncGithubTarget $job) =>
+            $job->targetId === $target->id && $job->userId === $user->id && $job->afterCommit === true);
+        Queue::assertPushed(SyncGithubTarget::class, 1);
+        Http::assertNothingSent();
+        $this->assertSame(\App\Enums\GithubTargetSyncStatus::Pending, $target->fresh()->sync_status);
+        $this->assertDatabaseCount('github_repositories', 0);
+    }
+
+    public static function targetTypeProvider(): array
+    {
+        return ['user' => ['user'], 'organization' => ['org']];
     }
 
     #[DataProvider('targetActionProvider')]
     public function test_target_actions_require_a_subscription_and_removal_keeps_shared_data(string $action, string $access): void
     {
+        Queue::fake();
         $user = User::factory()->create();
         $other = User::factory()->create();
         $target = \App\Models\GithubTarget::query()->create(['name' => 'octocat', 'type' => 'user']);
@@ -180,7 +186,13 @@ class TargetTest extends TestCase
         if ($access === 'guest') $response->assertRedirect(route('login'));
         elseif ($access === 'unsubscribed') $response->assertNotFound();
         else $response->assertRedirect(route('targets.index'));
-        if ($access !== 'subscribed' || $action === 'destroy') Http::assertNothingSent();
+        Http::assertNothingSent();
+        if ($access === 'subscribed' && $action === 'sync') {
+            Queue::assertPushed(SyncGithubTarget::class, fn (SyncGithubTarget $job) => $job->targetId === $target->id && $job->userId === $user->id);
+            Queue::assertPushed(SyncGithubTarget::class, 1);
+        } else {
+            Queue::assertNothingPushed();
+        }
         $this->assertTrue($target->fresh()->users()->whereKey($other)->exists());
         $this->assertDatabaseCount('github_targets', 1);
         $this->assertDatabaseCount('github_repositories', 1);

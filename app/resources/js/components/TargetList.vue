@@ -60,7 +60,7 @@ function deleteTarget(id: number) {
                                 <span>{{ target.name }}</span>
                                 <span class="text-xs text-muted-foreground">{{ lang[`status_${target.status}`] }}</span>
                                 <span v-if="target.last_synced_at" class="text-xs text-muted-foreground"
-                                    >{{ lang.last_synced }}: {{ formatDate(target.last_synced_at, lang.unknown_value) }}</span
+                                    >{{ lang.last_synced }}: {{ formatDate(target.last_synced_at, lang.unknown_value, true) }}</span
                                 >
                             </span>
                         </Button>

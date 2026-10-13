@@ -3,10 +3,14 @@ services:
   app:
     image: ${APP_IMAGE}
     container_name: ${APP_CONTAINER}
+    command: ["supervisord", "-c", "/etc/supervisord.conf"]
+    stop_grace_period: 90s
     volumes:
       - ../app:/app
     depends_on:
       app-postgresql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   nginx:
@@ -50,6 +54,11 @@ services:
   redis:
     image: ${REDIS_IMAGE}
     container_name: ${REDIS_CONTAINER}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 volumes:
   db-data:

@@ -4,14 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\GithubTargetType;
 use App\Http\Requests\StoreTargetRequest;
+use App\Jobs\SyncGithubTarget;
 use App\Models\GithubRepository;
 use App\Models\GithubTarget;
 use App\Repositories\GithubTargetRepository;
 use App\Services\AddGithubTargetForUser;
-use App\Services\AddGithubTargetResult;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
-use App\Services\TargetRepositoriesSynchronizer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +20,6 @@ class TargetController extends Controller
     public function __construct(
         private readonly GithubTargetRepository $targets,
         private readonly AddGithubTargetForUser $addGithubTargetForUser,
-        private readonly TargetRepositoriesSynchronizer $targetRepositoriesSynchronizer,
     ) {
     }
 
@@ -60,14 +56,9 @@ class TargetController extends Controller
     {
         abort_unless($this->targets->belongsToUser($request->user(), $target), 404);
 
-        try {
-            $this->targetRepositoriesSynchronizer->sync($target, $request->user()->github_token);
-            $translationKey = 'targets.sync_success';
-        } catch (ConnectionException|RequestException $exception) {
-            $translationKey = AddGithubTargetResult::fromException($target->name, $exception)->translationKey();
-        }
+        SyncGithubTarget::dispatch($target->id, $request->user()->id)->afterCommit();
 
-        return to_route('targets.index')->with('target_result', trans($translationKey, ['target' => $target->name]));
+        return to_route('targets.index');
     }
 
     public function destroy(GithubTarget $target, Request $request): RedirectResponse
