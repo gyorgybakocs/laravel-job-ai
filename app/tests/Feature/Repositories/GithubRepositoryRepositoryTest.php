@@ -5,6 +5,7 @@ namespace Tests\Feature\Repositories;
 use App\Enums\GithubTargetType;
 use App\Models\GithubRepository;
 use App\Models\GithubTarget;
+use App\Models\User;
 use App\Repositories\GithubRepositoryRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -79,6 +80,73 @@ class GithubRepositoryRepositoryTest extends TestCase
         $this->assertSame('Updated description.', $updatedRepository->description);
         $this->assertSame(42, $updatedRepository->stargazers_count);
         $this->assertTrue($updatedRepository->archived);
+    }
+
+    #[DataProvider('targetTypeProvider')]
+    public function test_paginated_for_user_returns_only_repositories_for_the_users_targets(GithubTargetType $type): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $target = GithubTarget::query()->create([
+            'name' => 'visible-target',
+            'type' => $type,
+        ]);
+        $otherTarget = GithubTarget::query()->create([
+            'name' => 'hidden-target',
+            'type' => $type,
+        ]);
+
+        $target->repositories()->create([
+            'external_id' => 901,
+            'name' => 'visible-repo',
+            'full_name' => 'visible-target/visible-repo',
+            'html_url' => 'https://github.com/visible-target/visible-repo',
+        ]);
+        $otherTarget->repositories()->create([
+            'external_id' => 902,
+            'name' => 'hidden-repo',
+            'full_name' => 'hidden-target/hidden-repo',
+            'html_url' => 'https://github.com/hidden-target/hidden-repo',
+        ]);
+
+        $user->githubTargets()->attach($target);
+        $otherUser->githubTargets()->attach($otherTarget);
+
+        $paginator = (new GithubRepositoryRepository())->paginatedForUser($user);
+        $items = $paginator->items();
+
+        $this->assertSame(1, $paginator->total());
+        $this->assertSame('visible-target/visible-repo', $items[0]->full_name);
+        $this->assertTrue($items[0]->relationLoaded('githubTarget'));
+        $this->assertTrue($items[0]->githubTarget->is($target));
+    }
+
+    public function test_paginated_for_user_uses_fifteen_items_by_default(): void
+    {
+        $this->freezeTime();
+        $user = User::factory()->create();
+        $target = GithubTarget::query()->create([
+            'name' => 'octocat',
+            'type' => GithubTargetType::User,
+        ]);
+        $user->githubTargets()->attach($target);
+
+        for ($i = 1; $i <= 16; $i++) {
+            $target->repositories()->create([
+                'external_id' => $i,
+                'name' => "repo-{$i}",
+                'full_name' => "octocat/repo-{$i}",
+                'html_url' => "https://github.com/octocat/repo-{$i}",
+                'external_updated_at' => now()->addMinutes($i),
+            ]);
+        }
+
+        $paginator = (new GithubRepositoryRepository())->paginatedForUser($user);
+
+        $this->assertSame(16, $paginator->total());
+        $this->assertCount(15, $paginator->items());
+        $this->assertSame('octocat/repo-16', $paginator->items()[0]->full_name);
     }
 
     #[DataProvider('repositoryBatchProvider')]
@@ -217,6 +285,14 @@ class GithubRepositoryRepositoryTest extends TestCase
                     202 => 'new-repo',
                 ],
             ],
+        ];
+    }
+
+    public static function targetTypeProvider(): array
+    {
+        return [
+            'user target' => [GithubTargetType::User],
+            'organization target' => [GithubTargetType::Organization],
         ];
     }
 }

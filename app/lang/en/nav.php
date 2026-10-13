@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'repositories' => 'Repositories',
     'home' => 'Home',
     'targets' => 'Targets',
     'login'        => 'Log in',

@@ -33,6 +33,15 @@ const user = computed(() => page.props.auth.user);
                                 <Link :href="route('targets.index')">{{ lang.targets }}</Link>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
+                        <NavigationMenuItem v-if="user">
+                            <NavigationMenuLink
+                                as-child
+                                :active="page.url.split('?')[0] === route('repositories.index', undefined, false)"
+                                :class="navigationMenuTriggerStyle()"
+                            >
+                                <Link :href="route('repositories.index')">{{ lang.repositories }}</Link>
+                            </NavigationMenuLink>
+                        </NavigationMenuItem>
                     </NavigationMenuList>
                 </NavigationMenu>
                 <NavigationMenu class="flex-none">
