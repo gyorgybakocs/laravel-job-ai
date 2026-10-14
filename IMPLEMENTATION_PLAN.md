@@ -281,3 +281,13 @@ The work is divided into environment setup and eleven incremental implementation
 - Repeated execution and shared targets do not produce duplicate targets, subscriptions, or repositories; Add and Sync now jobs for the same target use the same lock.
 - The frontend displays the user's request before the target exists and automatically refreshes the target list after success.
 - Successful and failed execution of the complete Add workflow is verified through a real Redis queue.
+
+**Implementation outcome:**
+
+- Add records a user-owned operation without a target relationship and dispatches the existing synchronization job. The HTTP request no longer retrieves GitHub data or persists a target.
+- The job reads the user's current credentials and retrieves repositories before starting the persistence transaction. The target, repositories, and user subscription are then saved together; a successful operation is linked to the saved target.
+- Retrieval or persistence failures are recorded on the requesting user's operation without leaving a new target or partial subscription/repository data behind.
+- Add and Sync now jobs use the same lock for the requested target type and name, including before a target exists. Repeated execution does not duplicate persisted targets, subscriptions, or repositories.
+- The frontend displays requests that do not yet have a target, including their status and safe error feedback. Active-operation polling refreshes those requests and the target lists after completion.
+- Verification: the new component and all twelve modified source/test files match the supplied implementation, with no deletions or whitespace errors. Tests cover queued addition, current credentials, provider failures, transactional rollback, shared targets, duplicate prevention, dispatch failures, and user-scoped operation display. Tests, build, and real Redis execution were not rerun during this review.
+- Both Add and Sync now now dispatch synchronization jobs; the implementation no longer performs GitHub retrieval directly in either HTTP action.

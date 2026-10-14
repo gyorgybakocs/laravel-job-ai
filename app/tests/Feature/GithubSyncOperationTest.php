@@ -200,6 +200,53 @@ class GithubSyncOperationTest extends TestCase
         ])->assertOk()->assertJsonPath('props.hasActiveSyncOperations', false);
     }
 
+    #[DataProvider('displayStateProvider')]
+    public function test_unlinked_requests_are_private_and_control_polling(GithubSyncOperationStatus $status, ?string $error, bool $active): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $operation = $user->githubSyncOperations()->create([
+            'target_name' => 'own-target', 'target_type' => 'org', 'status' => $status, 'error' => $error,
+        ])->fresh();
+        $other->githubSyncOperations()->create(['target_name' => 'private-target', 'target_type' => 'user']);
+        $this->actingAs($user)->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
+            ->where('hasActiveSyncOperations', $active)
+            ->has('unlinkedSyncOperations', 1)
+            ->where('unlinkedSyncOperations.0.id', $operation->id)
+            ->where('unlinkedSyncOperations.0.name', 'own-target')
+            ->where('unlinkedSyncOperations.0.type', 'org')
+            ->where('unlinkedSyncOperations.0.status', $status->value)
+            ->where('unlinkedSyncOperations.0.error', $error === null ? null : trans($error, ['target' => 'own-target'])));
+        Http::assertNothingSent();
+    }
+
+    public function test_add_queue_dispatch_failure_is_recorded_without_a_target(): void
+    {
+        $this->mock(Dispatcher::class)->shouldReceive('dispatch')->once()->andThrow(new RuntimeException('Secret queue details'));
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('targets.store'), ['name' => 'octocat', 'type' => 'user'])
+            ->assertRedirect(route('targets.index'))->assertSessionHas('target_result', trans('targets.request_failed'));
+        $operation = $user->githubSyncOperations()->first();
+        $this->assertSame(GithubSyncOperationStatus::Failed, $operation->status);
+        $this->assertSame('targets.request_failed', $operation->error);
+        $this->assertNotNull($operation->finished_at);
+        $this->assertDatabaseCount('github_targets', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_unlinked_request_history_is_bounded_but_older_active_operations_are_followed(): void
+    {
+        config(['services.github.targets_per_page' => 1]);
+        $user = User::factory()->create();
+        $user->githubSyncOperations()->create(['target_name' => 'active', 'target_type' => 'user']);
+        $latest = $user->githubSyncOperations()->create([
+            'target_name' => 'failed', 'target_type' => 'org', 'status' => GithubSyncOperationStatus::Failed,
+        ]);
+        $this->actingAs($user)->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
+            ->where('hasActiveSyncOperations', true)->has('unlinkedSyncOperations', 1)
+            ->where('unlinkedSyncOperations.0.id', $latest->id));
+    }
+
     private function targetFor(User $user, string $name = 'octocat'): GithubTarget
     {
         $target = GithubTarget::query()->create([

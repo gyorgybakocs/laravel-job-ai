@@ -5,7 +5,7 @@ export function useGithubSyncOperations(hasActiveOperations: Ref<boolean>, inter
     const { start, stop } = usePoll(
         interval,
         {
-            only: ['users', 'orgs', 'hasActiveSyncOperations', 'flash'],
+            only: ['users', 'orgs', 'hasActiveSyncOperations', 'unlinkedSyncOperations', 'flash'],
         },
         { autoStart: false },
     );

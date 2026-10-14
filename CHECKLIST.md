@@ -47,7 +47,7 @@ Suggested repository fields:
 
 ### 4. Queued synchronization
 
-- [ ] Run synchronization through a Laravel queue job so the user does not wait for GitHub to respond.
+- [x] Run synchronization through a Laravel queue job so the user does not wait for GitHub to respond.
 
 Short comments or notes are sufficient for the following; full implementation is not required:
 

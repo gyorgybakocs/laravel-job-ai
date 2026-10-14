@@ -18,6 +18,8 @@ return [
     'sync_success' => ':target synchronized',
     'sync_queued' => ':target synchronization queued',
     'sync_already_queued' => ':target synchronization is already queued or running',
+    'target_add_queued' => ':target addition queued',
+    'target_requests' => 'Target requests',
     'operation_queued' => 'Queued',
     'operation_running' => 'Syncing',
     'operation_succeeded' => 'Synced',

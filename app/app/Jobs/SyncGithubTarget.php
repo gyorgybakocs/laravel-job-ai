@@ -6,6 +6,7 @@ use App\Enums\GithubSyncOperationStatus;
 use App\Models\GithubSyncOperation;
 use App\Repositories\GithubTargetRepository;
 use App\Services\AddGithubTargetResult;
+use App\Services\AddGithubTargetForUser;
 use App\Services\TargetRepositoriesSynchronizer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -30,14 +31,19 @@ class SyncGithubTarget implements ShouldQueue
 
     public function __construct(
         public readonly int $operationId,
-        public readonly int $targetId,
+        public readonly ?int $targetId = null,
     ) {
         $this->timeout = (int) config('services.github.sync_timeout');
     }
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping('github-target:'.$this->targetId))
+        $operation = GithubSyncOperation::query()->find($this->operationId);
+        if ($operation === null) {
+            return [];
+        }
+
+        return [(new WithoutOverlapping('github-target:'.$operation->target_type->value.':'.strtolower($operation->target_name)))
             ->releaseAfter(config('services.github.sync_lock_retry_delay'))
             ->expireAfter(config('services.github.sync_lock_seconds'))];
     }
@@ -45,6 +51,7 @@ class SyncGithubTarget implements ShouldQueue
     public function handle(
         GithubTargetRepository $targets,
         TargetRepositoriesSynchronizer $synchronizer,
+        AddGithubTargetForUser $addTarget,
     ): void {
         $operation = GithubSyncOperation::query()->with(['user', 'githubTarget'])->find($this->operationId);
 
@@ -54,7 +61,7 @@ class SyncGithubTarget implements ShouldQueue
 
         $target = $operation->githubTarget;
         $user = $operation->user;
-        if ($target === null || $target->id !== $this->targetId || $user === null || ! $targets->belongsToUser($user, $target)) {
+        if ($user === null || ($this->targetId !== null && ($target === null || $target->id !== $this->targetId || ! $targets->belongsToUser($user, $target)))) {
             $operation->update([
                 'status' => GithubSyncOperationStatus::Failed,
                 'error' => 'targets.target_not_found',
@@ -72,8 +79,13 @@ class SyncGithubTarget implements ShouldQueue
         ]);
 
         try {
-            $synchronizer->syncForOperation($target, $user->github_token);
+            if ($this->targetId === null) {
+                $target = $addTarget->add($user, $operation->target_name, $operation->target_type);
+            } else {
+                $synchronizer->syncForOperation($target, $user->github_token);
+            }
             $operation->update([
+                'github_target_id' => $target->id,
                 'status' => GithubSyncOperationStatus::Succeeded,
                 'finished_at' => now(),
             ]);

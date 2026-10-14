@@ -39,6 +39,7 @@ class TargetTest extends TestCase
     #[DataProvider('lookupProvider')]
     public function test_lookup_reports_success_or_a_safe_error(?int $status, string $type, string $message): void
     {
+        Queue::fake();
         $user = User::factory()->create(['github_token' => 'test-token']);
         Http::fake(['https://api.github.test/*' => $status === null
             ? Http::failedConnection()
@@ -46,7 +47,20 @@ class TargetTest extends TestCase
 
         $this->actingAs($user)->post(route('targets.store'), ['name' => 'octocat', 'type' => $type])
             ->assertSessionHasNoErrors()->assertRedirect(route('targets.index'))
-            ->assertSessionHas('target_result', trans("targets.{$message}", ['target' => 'octocat']));
+            ->assertSessionHas('target_result', trans('targets.target_add_queued', ['target' => 'octocat']));
+
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('github_targets', 0);
+        Queue::assertPushed(SyncGithubTarget::class, 1);
+        $job = Queue::pushed(SyncGithubTarget::class)->first();
+        try {
+            app()->call([$job, 'handle']);
+        } catch (\Illuminate\Http\Client\ConnectionException|\Illuminate\Http\Client\RequestException $exception) {
+            $this->assertNotSame(200, $status);
+        }
+        $operation = $user->githubSyncOperations()->first();
+        $this->assertSame($status === 200 ? 'succeeded' : 'failed', $operation->status->value);
+        $this->assertSame($status === 200 ? null : "targets.{$message}", $operation->error);
 
         if ($status !== null) {
             $path = $type === 'org' ? 'orgs' : 'users';
@@ -61,7 +75,7 @@ class TargetTest extends TestCase
         $this->assertNull(app(\App\Src\Github\GithubClient::class)->getToken());
 
         $this->get(route('targets.index'))->assertInertia(fn (Assert $page) => $page
-            ->where('flash.targetResult', trans("targets.{$message}", ['target' => 'octocat'])));
+            ->where('flash.targetResult', trans('targets.target_add_queued', ['target' => 'octocat'])));
     }
 
     public static function lookupProvider(): array
@@ -101,6 +115,7 @@ class TargetTest extends TestCase
     #[DataProvider('storageProvider')]
     public function test_add_stores_repositories_without_duplicates_and_lists_only_followed_targets(string $type, bool $anotherUser): void
     {
+        Queue::fake();
         $user = User::factory()->create();
         $other = User::factory()->create();
         $unrelated = \App\Models\GithubTarget::query()->create(['name' => 'unrelated', 'type' => $type]);
@@ -115,6 +130,8 @@ class TargetTest extends TestCase
         foreach ([$user, $anotherUser ? $other : $user] as $requester) {
             $this->actingAs($requester)->post(route('targets.store'), ['name' => 'octocat', 'type' => $type])
                 ->assertSessionHasNoErrors()->assertRedirect(route('targets.index'));
+            $job = Queue::pushed(SyncGithubTarget::class)->last();
+            app()->call([$job, 'handle']);
         }
 
         $this->assertDatabaseCount('github_targets', 2);

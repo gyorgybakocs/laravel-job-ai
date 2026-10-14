@@ -67,6 +67,8 @@ export interface UiTranslations {
         sync_success: string;
         sync_queued: string;
         sync_already_queued: string;
+        target_add_queued: string;
+        target_requests: string;
         operation_queued: string;
         operation_running: string;
         operation_succeeded: string;
@@ -153,6 +155,13 @@ export interface GithubSyncOperation {
     status: 'queued' | 'running' | 'succeeded' | 'failed';
     started_at: string | null;
     finished_at: string | null;
+}
+
+export interface UnlinkedGithubSyncOperation extends GithubSyncOperation {
+    name: string;
+    type: 'user' | 'org';
+    error: string | null;
+    created_at: string;
 }
 
 export interface GithubTarget {

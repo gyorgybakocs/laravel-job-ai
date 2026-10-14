@@ -250,6 +250,85 @@ class SyncGithubTargetJobTest extends TestCase
         return ['queued' => [GithubSyncOperationStatus::Queued], 'running' => [GithubSyncOperationStatus::Running]];
     }
 
+    #[DataProvider('successProvider')]
+    public function test_add_job_creates_and_links_target_with_current_credentials(string $type, ?string $token): void
+    {
+        $user = User::factory()->create(['github_token' => 'old-token']);
+        $operation = $user->githubSyncOperations()->create(['target_name' => 'octocat', 'target_type' => $type])->fresh();
+        $job = new SyncGithubTarget($operation->id);
+        $this->assertStringNotContainsString('old-token', serialize($job));
+        $user->update(['github_token' => $token]);
+        Http::fake(['https://api.github.test/*' => Http::response([
+            ['id' => 123, 'name' => 'repo', 'full_name' => 'octocat/repo', 'html_url' => 'https://github.com/octocat/repo'],
+        ])]);
+
+        app()->call([$job, 'handle']);
+        app()->call([$job, 'handle']);
+        $target = $user->githubTargets()->firstOrFail();
+        $this->assertSame($target->id, $operation->fresh()->github_target_id);
+        $this->assertSame(GithubSyncOperationStatus::Succeeded, $operation->fresh()->status);
+        $this->assertDatabaseCount('github_targets', 1);
+        $this->assertDatabaseCount('github_target_user', 1);
+        $this->assertDatabaseCount('github_repositories', 1);
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request) => $token === null
+            ? ! $request->hasHeader('Authorization')
+            : $request->hasHeader('Authorization', 'Bearer '.$token));
+        $syncOperation = $this->createOperation($user, $target);
+        $syncJob = new SyncGithubTarget($syncOperation->id, $target->id);
+        $this->assertSame($job->middleware()[0]->getLockKey($job), $syncJob->middleware()[0]->getLockKey($syncJob));
+        $this->assertNull(app(GithubClient::class)->getToken());
+    }
+
+    #[DataProvider('failureProvider')]
+    public function test_failed_add_records_safe_error_without_persisting_a_target(?int $status, string $error): void
+    {
+        $user = User::factory()->create();
+        $operation = $user->githubSyncOperations()->create(['target_name' => 'missing', 'target_type' => 'user'])->fresh();
+        Http::fake(['https://api.github.test/*' => $status === null ? Http::failedConnection() : Http::response([], $status)]);
+        try {
+            app()->call([new SyncGithubTarget($operation->id), 'handle']);
+            $this->fail('The Add job must propagate provider failures.');
+        } catch (ConnectionException|RequestException $exception) {
+            $this->assertSame($error, $operation->fresh()->error);
+        }
+        $this->assertSame(GithubSyncOperationStatus::Failed, $operation->fresh()->status);
+        $this->assertNull($operation->fresh()->github_target_id);
+        $this->assertDatabaseCount('github_targets', 0);
+        $this->assertDatabaseCount('github_target_user', 0);
+        $this->assertDatabaseCount('github_repositories', 0);
+        $this->assertNull(app(GithubClient::class)->getToken());
+    }
+
+    #[DataProvider('addRollbackProvider')]
+    public function test_add_persistence_is_atomic_when_repository_mapping_fails(bool $existing): void
+    {
+        $user = User::factory()->create();
+        $target = $existing ? GithubTarget::query()->create(['name' => 'octocat', 'type' => 'user']) : null;
+        $operation = $user->githubSyncOperations()->create(['target_name' => 'octocat', 'target_type' => 'user'])->fresh();
+        Http::fake(['https://api.github.test/*' => Http::response([
+            ['id' => 1, 'name' => 'valid', 'full_name' => 'octocat/valid', 'html_url' => 'https://github.com/octocat/valid'],
+            ['id' => 2, 'name' => 'invalid'],
+        ])]);
+        try {
+            app()->call([new SyncGithubTarget($operation->id), 'handle']);
+            $this->fail('Invalid repository data must roll back the entire Add.');
+        } catch (\Throwable $exception) {
+            $this->assertNotInstanceOf(AssertionFailedError::class, $exception);
+        }
+        $this->assertDatabaseCount('github_targets', $existing ? 1 : 0);
+        $this->assertDatabaseCount('github_target_user', 0);
+        $this->assertDatabaseCount('github_repositories', 0);
+        $this->assertSame('targets.request_failed', $operation->fresh()->error);
+        $this->assertNull($operation->fresh()->github_target_id);
+        if ($target !== null) $this->assertNull($target->fresh()->last_synced_at);
+    }
+
+    public static function addRollbackProvider(): array
+    {
+        return ['new target' => [false], 'existing shared target' => [true]];
+    }
+
     private function createOperation(User $user, GithubTarget $target): GithubSyncOperation
     {
         return $user->githubSyncOperations()->create([

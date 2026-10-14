@@ -9,7 +9,6 @@ use App\Services\RequestGithubTargetSync;
 use App\Models\GithubRepository;
 use App\Models\GithubTarget;
 use App\Repositories\GithubTargetRepository;
-use App\Services\AddGithubTargetForUser;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,6 @@ class TargetController extends Controller
 {
     public function __construct(
         private readonly GithubTargetRepository $targets,
-        private readonly AddGithubTargetForUser $addGithubTargetForUser,
         private readonly RequestGithubTargetSync $requestGithubTargetSync,
     ) {
     }
@@ -34,8 +32,24 @@ class TargetController extends Controller
             'syncPollInterval' => config('services.github.sync_poll_interval'),
             'hasActiveSyncOperations' => $request->user()->githubSyncOperations()
                 ->whereIn('status', [GithubSyncOperationStatus::Queued, GithubSyncOperationStatus::Running])
-                ->whereHas('githubTarget.users', fn ($query) => $query->whereKey($request->user()->id))
+                ->where(fn ($query) => $query->whereNull('github_target_id')
+                    ->orWhereHas('githubTarget.users', fn ($query) => $query->whereKey($request->user()->id)))
                 ->exists(),
+            'unlinkedSyncOperations' => $request->user()->githubSyncOperations()
+                ->whereNull('github_target_id')
+                ->latest('id')
+                ->limit(config('services.github.targets_per_page'))
+                ->get()
+                ->map(fn ($operation): array => [
+                    'id' => $operation->id,
+                    'name' => $operation->target_name,
+                    'type' => $operation->target_type->value,
+                    'status' => $operation->status->value,
+                    'error' => $operation->error === null ? null : trans($operation->error, ['target' => $operation->target_name]),
+                    'created_at' => $operation->created_at->toISOString(),
+                    'started_at' => $operation->started_at?->toISOString(),
+                    'finished_at' => $operation->finished_at?->toISOString(),
+                ]),
             'orgs' => $this->targetPaginator(
                 $this->targets->paginatedForUserByType($request->user(), GithubTargetType::Organization, 'orgs_page'),
             ),
@@ -46,7 +60,7 @@ class TargetController extends Controller
     {
         $validated = $request->validated();
 
-        $result = $this->addGithubTargetForUser->add(
+        $operation = $this->requestGithubTargetSync->requestAdd(
             $request->user(),
             $validated['name'],
             GithubTargetType::from($validated['type']),
@@ -54,8 +68,8 @@ class TargetController extends Controller
 
         return redirect()
             ->route('targets.index')
-            ->with('target_result', trans($result->translationKey(), [
-                'target' => $result->targetName(),
+            ->with('target_result', trans($operation->status === GithubSyncOperationStatus::Failed ? $operation->error : 'targets.target_add_queued', [
+                'target' => $validated['name'],
             ]));
     }
 
