@@ -97,7 +97,7 @@ Possible placeholder scenarios include API failures, pagination, job retries, sc
 
 Feel free to use AI tools such as Claude Code, Codex, OpenCode, Pi, or similar tools. Using AI is not a negative in this task.
 
-Submit an `AI_USAGE.md` file containing:
+Submit an `docs/AI_USAGE.md` file containing:
 
 - The tools used
 - Important prompts or instructions

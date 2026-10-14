@@ -6,7 +6,7 @@
 
 The environment is fully containerised so that nothing is installed on your machine (or anyone else's) beyond Docker. No global PHP, Node, Composer, or Postgres. The project runs identically on every machine.
 
-The setup may look involved at first glance, but it is well-parameterised: versions, image names, container names, ports, and credentials all live in `environment/.env.dev` and `environment/.env.secrets.dev`. Adapting it to a new project is a matter of changing those values — in practice this took roughly half an hour here.
+The setup may look involved at first glance, but it is well-parameterised: versions, image names, container names, ports, and credentials all live in `../environment/.env.dev` and `environment/.env.secrets.dev`. Adapting it to a new project is a matter of changing those values — in practice this took roughly half an hour here.
 
 > **Note:** A `dev` environment is fully set up. A `prod` environment (separate image targets, hardened config, no Adminer, etc.) was deliberately left out of scope for this task.
 
@@ -103,7 +103,7 @@ Run after any artisan generator or whenever file permissions block IDE access:
 make own
 ```
 
-This stops the environment, resets all `app/` ownership to the host user (uid 1000), restores `storage/` and `bootstrap/cache/` permissions for PHP-FPM, then exits. Start the environment again with `make upd` when ready.
+This stops the environment, resets all `../app` ownership to the host user (uid 1000), restores `storage/` and `bootstrap/cache/` permissions for PHP-FPM, then exits. Start the environment again with `make upd` when ready.
 
 ### Updating dependencies
 
@@ -129,9 +129,9 @@ make provision-composer  # rebuild Composer image
 
 ## Environment variables and the app `.env`
 
-During `make ci`, the install script merges `environment/.env.secrets.dev` and `environment/.env.dev` into `app/.env`. This happens **once**, on first install.
+During `make ci`, the install script merges `../environment/.env.secrets.dev` and `environment/.env.dev` into `app/.env`. This happens **once**, on first install.
 
-> **Important:** Any subsequent changes to `environment/.env.dev` or `environment/.env.secrets.dev` are **not** automatically reflected in `app/.env`. You must update `app/.env` manually to keep them in sync.
+> **Important:** Any subsequent changes to `../environment/.env.dev` or `environment/.env.secrets.dev` are **not** automatically reflected in `app/.env`. You must update `app/.env` manually to keep them in sync.
 
 ---
 
