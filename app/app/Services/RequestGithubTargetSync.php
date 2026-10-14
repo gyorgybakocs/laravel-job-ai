@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\GithubSyncOperationStatus;
+use App\Enums\GithubTargetType;
 use App\Jobs\SyncGithubTarget;
 use App\Models\GithubSyncOperation;
 use App\Models\GithubTarget;
@@ -39,9 +40,25 @@ class RequestGithubTargetSync
             ]);
         });
 
+        return $this->dispatch($operation, $target->id);
+    }
+
+    public function requestAdd(User $user, string $name, GithubTargetType $type): GithubSyncOperation
+    {
+        $operation = $user->githubSyncOperations()->create([
+            'target_name' => $name,
+            'target_type' => $type,
+            'status' => GithubSyncOperationStatus::Queued,
+        ]);
+
+        return $this->dispatch($operation, null);
+    }
+
+    private function dispatch(GithubSyncOperation $operation, ?int $targetId): GithubSyncOperation
+    {
         if ($operation->wasRecentlyCreated) {
             try {
-                $this->dispatcher->dispatch((new SyncGithubTarget($operation->id, $target->id))->afterCommit());
+                $this->dispatcher->dispatch((new SyncGithubTarget($operation->id, $targetId))->afterCommit());
             } catch (Throwable $exception) {
                 $operation->update([
                     'status' => GithubSyncOperationStatus::Failed,

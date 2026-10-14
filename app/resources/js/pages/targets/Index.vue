@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GithubSyncOperationList from '@/components/GithubSyncOperationList.vue';
 import InputError from '@/components/InputError.vue';
 import TargetList from '@/components/TargetList.vue';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useGithubSyncOperations } from '@/composables/useGithubSyncOperations';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { GithubTarget, Paginator, SharedData } from '@/types';
+import type { GithubTarget, Paginator, SharedData, UnlinkedGithubSyncOperation } from '@/types';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -16,6 +17,7 @@ const props = defineProps<{
     orgs: Paginator<GithubTarget>;
     hasActiveSyncOperations: boolean;
     syncPollInterval: number;
+    unlinkedSyncOperations: UnlinkedGithubSyncOperation[];
 }>();
 useGithubSyncOperations(
     computed(() => props.hasActiveSyncOperations),
@@ -49,6 +51,7 @@ function submit() {
             <p v-if="targetResult" role="status" class="rounded-md border bg-background px-4 py-3 text-sm">
                 {{ targetResult }}
             </p>
+            <GithubSyncOperationList :operations="unlinkedSyncOperations" />
             <section class="mb-10 mt-6">
                 <h2 class="mb-3 text-sm font-semibold">{{ lang.users }}</h2>
                 <TargetList :paginator="users" :empty-message="lang.no_users" />
