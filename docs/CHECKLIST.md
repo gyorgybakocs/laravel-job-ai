@@ -1,6 +1,6 @@
 # README Requirements Checklist
 
-Source: [README.md](README.md). Status reflects the current application, not the previous implementation.
+Source: [README.md](../README.md). Status reflects the current application, not the previous implementation.
 
 `[x]` = completed. `[ ]` = not completed or not yet verified. Suggested fields are listed separately from mandatory behavior. Optional extensions and discussion topics are not baseline requirements.
 
@@ -79,11 +79,11 @@ Browser E2E tests are not required. Clearly named placeholder test methods for a
 
 ### 7. AI usage documentation
 
-- [ ] Submit `AI_USAGE.md` containing the tools used.
-- [ ] Include important prompts or instructions.
-- [ ] Identify areas that were substantially AI-generated.
-- [ ] Include examples of suggestions changed or rejected.
-- [ ] Explain how generated code was validated.
+- [x] Submit `docs/AI_USAGE.md` containing the tools used.
+- [x] Include important prompts or instructions.
+- [x] Identify areas that were substantially AI-generated.
+- [x] Include examples of suggestions changed or rejected.
+- [x] Explain how generated code was validated.
 
 If no AI was used, the file should state that instead. Be prepared to explain all submitted code, including AI-generated code.
 
@@ -128,11 +128,11 @@ The README does not require completing all optional extensions.
 
 Add a short submission note with:
 
-- [ ] Approximate time spent.
-- [ ] Completed parts.
-- [ ] Incomplete parts.
-- [ ] What would be implemented next and why.
-- [ ] Important compromises or shortcuts.
+- [x] Approximate time spent.
+- [x] Completed parts.
+- [x] Incomplete parts.
+- [x] What would be implemented next and why.
+- [x] Important compromises or shortcuts.
 
 ## PREPARE — follow-up discussion
 
