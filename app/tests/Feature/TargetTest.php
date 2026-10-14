@@ -154,10 +154,10 @@ class TargetTest extends TestCase
 
         $this->actingAs($user)->post(route('targets.sync', $target))
             ->assertRedirect(route('targets.index'))
-            ->assertSessionMissing('target_result');
+            ->assertSessionHas('target_result', trans('targets.sync_queued', ['target' => 'octocat']));
 
         Queue::assertPushed(SyncGithubTarget::class, fn (SyncGithubTarget $job) =>
-            $job->targetId === $target->id && $job->userId === $user->id && $job->afterCommit === true);
+            $job->targetId === $target->id && $job->operationId === $user->githubSyncOperations()->first()->id && $job->afterCommit === true);
         Queue::assertPushed(SyncGithubTarget::class, 1);
         Http::assertNothingSent();
         $this->assertSame(\App\Enums\GithubTargetSyncStatus::Pending, $target->fresh()->sync_status);
@@ -188,7 +188,7 @@ class TargetTest extends TestCase
         else $response->assertRedirect(route('targets.index'));
         Http::assertNothingSent();
         if ($access === 'subscribed' && $action === 'sync') {
-            Queue::assertPushed(SyncGithubTarget::class, fn (SyncGithubTarget $job) => $job->targetId === $target->id && $job->userId === $user->id);
+            Queue::assertPushed(SyncGithubTarget::class, fn (SyncGithubTarget $job) => $job->targetId === $target->id && $job->operationId === $user->githubSyncOperations()->first()->id);
             Queue::assertPushed(SyncGithubTarget::class, 1);
         } else {
             Queue::assertNothingPushed();

@@ -5,12 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useGithubSyncOperations } from '@/composables/useGithubSyncOperations';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { GithubTarget, Paginator, SharedData } from '@/types';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-defineProps<{ users: Paginator<GithubTarget>; orgs: Paginator<GithubTarget> }>();
+const props = defineProps<{
+    users: Paginator<GithubTarget>;
+    orgs: Paginator<GithubTarget>;
+    hasActiveSyncOperations: boolean;
+    syncPollInterval: number;
+}>();
+useGithubSyncOperations(
+    computed(() => props.hasActiveSyncOperations),
+    props.syncPollInterval,
+);
 
 const page = usePage<SharedData>();
 const lang = computed(() => page.props.lang.targets);

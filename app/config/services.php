@@ -40,6 +40,10 @@ return [
         'base_url' => env('GITHUB_API_BASE_URL', 'https://api.github.com'),
         'per_page' => (int) env('GITHUB_API_PER_PAGE', 100),
         'timeout' => (int) env('GITHUB_API_TIMEOUT', 10),
+        'sync_timeout' => (int) env('GITHUB_SYNC_TIMEOUT', 60),
+        'sync_lock_seconds' => (int) env('GITHUB_SYNC_LOCK_SECONDS', 75),
+        'sync_lock_retry_delay' => (int) env('GITHUB_SYNC_LOCK_RETRY_DELAY', 3),
+        'sync_poll_interval' => (int) env('GITHUB_SYNC_POLL_INTERVAL', 2000),
     ],
 
 ];

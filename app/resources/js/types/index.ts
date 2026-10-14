@@ -65,6 +65,12 @@ export interface UiTranslations {
         delete_target: string;
         pagination: string;
         sync_success: string;
+        sync_queued: string;
+        sync_already_queued: string;
+        operation_queued: string;
+        operation_running: string;
+        operation_succeeded: string;
+        operation_failed: string;
         status_pending: string;
         status_syncing: string;
         status_synced: string;
@@ -142,6 +148,13 @@ export interface GithubRepository {
     github_updated_at: string | null;
 }
 
+export interface GithubSyncOperation {
+    id: number;
+    status: 'queued' | 'running' | 'succeeded' | 'failed';
+    started_at: string | null;
+    finished_at: string | null;
+}
+
 export interface GithubTarget {
     id: number;
     name: string;
@@ -149,6 +162,7 @@ export interface GithubTarget {
     status: 'pending' | 'syncing' | 'synced' | 'failed';
     last_synced_at: string | null;
     last_error: string | null;
+    sync_operation: GithubSyncOperation | null;
     repositories_count: number;
     repositories: GithubRepository[];
 }
