@@ -51,10 +51,10 @@ Suggested repository fields:
 
 Short comments or notes are sufficient for the following; full implementation is not required:
 
-- [ ] Duplicate synchronization requests.
-- [ ] Job retries and failed jobs.
-- [ ] Timeouts.
-- [ ] Overlapping jobs.
+- [x] Duplicate synchronization requests.
+- [x] Job retries and failed jobs.
+- [x] Timeouts.
+- [x] Overlapping jobs.
 
 ### 5. Inertia.js and Vue UI
 
@@ -105,7 +105,7 @@ SQLite is permitted, not required.
 ### Error handling
 
 - [x] Handle GitHub failures without showing raw exceptions to the user.
-- [ ] Leave enough information to identify which synchronization failed and why.
+- [x] Leave enough information to identify which synchronization failed and why.
 
 ## Optional extensions — only after the baseline works
 

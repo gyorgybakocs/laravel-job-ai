@@ -34,7 +34,12 @@ class GithubTargetRepository
             ->githubTargets()
             ->with(['repositories' => fn ($query) => $query
                 ->orderByDesc('stargazers_count')
-                ->orderBy('name')])
+                ->orderBy('name'),
+                'githubSyncOperations' => fn ($query) => $query
+                    ->where('user_id', $user->id)
+                    ->latest('id')
+                    ->limit(1),
+            ])
             ->withCount('repositories')
             ->where('github_targets.type', $type->value)
             ->orderByDesc('github_target_user.created_at')

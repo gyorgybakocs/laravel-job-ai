@@ -255,6 +255,16 @@ The work is divided into environment setup and eleven incremental implementation
 - The frontend polls only while operations are active, refreshes the list after success, and does not expose another user's operation errors.
 - Add still follows the previous synchronous workflow at this stage.
 
+**Implementation outcome:**
+
+- Sync now records a user-owned operation and dispatches the synchronization job after commit. Repeated requests reuse that user's active operation instead of dispatching another job.
+- The job records running, successful, or failed outcomes and execution timestamps. It reads current user credentials and checks the subscription before retrieval. Repository changes are transactional; a failed attempt preserves existing repositories and the last successful synchronization time.
+- Jobs for the same target use an overlap lock. Timeout, lock expiry, and release delay are configurable. Lock contention releases the job for another attempt; execution exceptions fail the operation and propagate to queue failure handling.
+- Failure records and logs identify the operation, target, requester, exception type, and HTTP status without exposing credentials or raw provider errors in the UI.
+- The frontend displays the requesting user's latest operation and polls the existing target page only while relevant operations are active. Completed operations refresh the list automatically, and other users' operation errors remain private.
+- Verification: all three new source files and thirteen modified source/configuration files match the supplied implementation, with no deletions. The user confirmed that tests pass. Tests cover operation reuse, user isolation, dispatch failures, job outcomes, overlap locking, transactional rollback, and active-operation tracking. Tests and builds were not rerun during this review.
+- This step is complete. Add still performs synchronous retrieval and persistence; its queue migration is the remaining synchronization step.
+
 ## 11 — Move Add to the queue
 
 **Story:** As a user, I want to add a target in the background and see the request's status or error before the target exists.

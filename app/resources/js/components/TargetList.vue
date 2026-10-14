@@ -14,6 +14,10 @@ const lang = computed(() => page.props.lang.targets);
 const openId = ref<number | null>(null);
 const processing = ref<number | null>(null);
 
+function isSyncActive(target: GithubTarget): boolean {
+    return target.sync_operation?.status === 'queued' || target.sync_operation?.status === 'running';
+}
+
 function updateOpen(id: number, open: boolean) {
     openId.value = open ? id : null;
 }
@@ -58,7 +62,9 @@ function deleteTarget(id: number) {
                             <ChevronDown class="mr-2 size-4 shrink-0" aria-hidden="true" />
                             <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
                                 <span>{{ target.name }}</span>
-                                <span class="text-xs text-muted-foreground">{{ lang[`status_${target.status}`] }}</span>
+                                <span class="text-xs text-muted-foreground">{{
+                                    target.sync_operation ? lang[`operation_${target.sync_operation.status}`] : lang[`status_${target.status}`]
+                                }}</span>
                                 <span v-if="target.last_synced_at" class="text-xs text-muted-foreground"
                                     >{{ lang.last_synced }}: {{ formatDate(target.last_synced_at, lang.unknown_value, true) }}</span
                                 >
@@ -66,7 +72,7 @@ function deleteTarget(id: number) {
                         </Button>
                     </CollapsibleTrigger>
                     <div class="flex shrink-0 gap-2">
-                        <Button :disabled="processing !== null" @click="syncTarget(target.id)">{{ lang.sync_now }}</Button>
+                        <Button :disabled="processing !== null || isSyncActive(target)" @click="syncTarget(target.id)">{{ lang.sync_now }}</Button>
                         <Button
                             size="icon"
                             variant="destructive"

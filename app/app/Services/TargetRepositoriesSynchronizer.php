@@ -48,4 +48,26 @@ class TargetRepositoriesSynchronizer
         $target->last_error = null;
         $this->targets->save($target);
     }
+
+    /**
+     * @throws Throwable
+     */
+    public function syncForOperation(GithubTarget $target, ?string $token): void
+    {
+        try {
+            $repositories = $this->githubClient
+                ->setToken($token)
+                ->getRepositories($target->name, $target->type->value);
+
+            $target->getConnection()->transaction(function () use ($target, $repositories): void {
+                $this->repositories->upsertManyForTarget($target, $repositories);
+                $target->sync_status = GithubTargetSyncStatus::Synced;
+                $target->last_synced_at = now();
+                $target->last_error = null;
+                $this->targets->save($target);
+            });
+        } finally {
+            $this->githubClient->setToken(null);
+        }
+    }
 }
