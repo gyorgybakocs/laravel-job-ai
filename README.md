@@ -1,8 +1,8 @@
-# SportMate Medior Developer Interview Task
+# Demo
 
-A good part of our backend work is about connecting our own product to other systems - for example payment providers, invoicing platforms, access-control systems, parking systems, and our mobile app.
+Backend development often involves integrating applications with external services and APIs. This includes retrieving and processing external data, storing it locally, handling asynchronous operations, and keeping information synchronized between systems.
 
-This task is a small version of that kind of work. We are mainly interested in how you structure Laravel code, work with an external API, make practical choices, and explain the trade-offs you made.
+This task is a small example of that kind of work. We are mainly interested in how you structure Laravel code, work with an external API, make practical choices, and explain the trade-offs you made.
 
 ## What we would like you to build
 
